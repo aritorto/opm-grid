@@ -263,11 +263,10 @@ public:
     //                                      EACH parent cell will have (\Pi_{l=0}^2 cells_per_dim[l]) children cells.
     // @param start_ijk                     The minimum values of i,j, k to construct the patch.
     // @param end_ijk                       The maximum values of i,j,k to construct the patch.
-    // @param refined_grid                  To store the refined data in a CpGridData object.
     CpGridData refine_block_patch(const std::array<int,3>& cells_per_dim,
-                                  std::array<int,3> start_ijk, std::array<int,3> end_ijk,
-                                  CpGridData& refined_grid)
+                                  std::array<int,3> start_ijk, std::array<int,3> end_ijk)
     {
+        CpGridData refined_grid;
         DefaultGeometryPolicy& children_geometries = refined_grid.geometry_;
         std::vector<std::array<int,8>>& children_cell_to_point = refined_grid.cell_to_point_;
         cpgrid::OrientedEntityTable<0,1>& children_cell_to_face = refined_grid.cell_to_face_;
@@ -315,6 +314,66 @@ public:
                               children_face_normals);
         return refined_grid;
     }
+    
+    // Construct levels. Refinement based on 'block patches' with 'uniform' regular intervals (may differ from level to level).
+    // @param cells_per_dim_levels          The number of sub-cells in each direction (for each cell), in each level.
+    // @param start_ijk                     The minimum values of i,j, k to construct the patch, in each level.
+    // @param end_ijk                       The maximum values of i,j,k to construct the patch, in each level.
+    // Amount of levels known
+    template<int total_levels>
+    std::array<CpGridData, total_levels> levels(const std::vector<std::array<int,3>>& cells_per_dim_levels,
+                                                std::vector<std::array<int,3>> start_ijk_levels,
+                                                std::vector<std::array<int,3>> end_ijk_levels)
+    {
+        //assert(cells_per_dim_levels.size() == total_levels && start_ijk_levels.size() == total_levels);
+        // std::vector<std::array<int,3>> parents_to_children; // {parent level, parent index, (one) child index}
+        //child_to_parent;
+        std::array<CpGridData, total_levels> levels;
+        for (int l = 0; l < total_levels; ++l) {
+            // assert(start_ijk_levels[l+1][0] < cells_per_dim_levels[l][0]);
+            // assert(start_ijk_levels[l+1][1] < cells_per_dim_levels[l][1]);
+            // assert(start_ijk_levels[l+1][2] < cells_per_dim_levels[l][2]);
+            levels[l] = refine_block_patch(cells_per_dim_levels[l], start_ijk_levels[l], end_ijk_levels[l]);
+            /* std::vector<std::array<int,3>> parents_indices;
+               parents_indices.resize(end_ijk_levels[l][0] - start_ijk_levels[l][0],
+               end_ijk_levels[l][1] - start_ijk_levels[l][1],
+               end_ijk_levels[l][2] - start_ijk_levels[l][2]);*/
+            std::array<int,3> parents_dim = {end_ijk_levels[l+1][0]-start_ijk_levels[l+1][0],
+                end_ijk_levels[l+1][1]-start_ijk_levels[l+1][1],
+                end_ijk_levels[l+1][2]-start_ijk_levels[l+1][2]};
+            std::vector<std::tuple<int,std::vector<int>>> parent_to_children;
+            //   int parent_to_children_size = cells_per_dim_levels[l+1][0]*parents_dim[0]
+            //    *cells_per_dim_levels[l+1][1]*parents_dim[1]*cells_per_dim_levels[l+1][2]*parents_dim[2];
+            parent_to_children.reserve(cells_per_dim_levels[l+1][0]*parents_dim[0]
+                *cells_per_dim_levels[l+1][1]*parents_dim[1]*cells_per_dim_levels[l+1][2]*parents_dim[2]);
+            for (int k = 0; k < parents_dim[2]; ++k) {
+                for (int j = 0; j < parents_dim[1]; ++j) {
+                    for (int i = 0; i < parents_dim[0]; ++i) {
+                        int parent_idx = levels[l].global_cell_[((start_ijk_levels[l+1][2]+ k)*(levels[l].logical_cartesian_size_[0])
+                                                                *(levels[l].logical_cartesian_size_[1]))
+                                                               + ((start_ijk_levels[l+1][1]+j)*(levels[l].logical_cartesian_size_[0]))
+                                                                + start_ijk_levels[l+1][0] +i];
+                        for (int t = cells_per_dim_levels[l+1][2]*k; t < cells_per_dim_levels[l+1][2]*(k+1); ++t) {
+                            for (int s = cells_per_dim_levels[l+1][1]*j; s < cells_per_dim_levels[l+1][1]*(j+1); ++s) {
+                                for (int r = cells_per_dim_levels[l+1][0]*i; r <cells_per_dim_levels[l+1][0]*(i+1); ++r) {
+                                    parent_to_children.push_back({parent_idx,
+                                        levels[l+1].global_cell_[(t*(levels[l+1].logical_cartesian_size_[0])
+                                                                *(levels[l+1].logical_cartesian_size_[1]))
+                                                                 + (s*(levels[l+1].logical_cartesian_size_[0]))
+                                                                + r]});
+                                } // end r-for-loop
+                            } // end s-for-loop
+                        } // end t-for-loop
+                    } // end i-for-loop
+                } // end j-for-loop
+            } // end k-for-loop
+            
+        }
+         return levels;
+    }
+    
+    
+    
 
 
     // Make unique boundary ids for all intersections.
