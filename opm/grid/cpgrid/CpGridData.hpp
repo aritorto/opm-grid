@@ -321,12 +321,13 @@ public:
     // @param end_ijk                       The maximum values of i,j,k to construct the patch, in each level.
     // Amount of levels known
     template<int total_levels>
-    std::array<CpGridData, total_levels> levels(const std::vector<std::array<int,3>>& cells_per_dim_levels,
+    std::tuple<std::array<CpGridData, total_levels>,std::vector<std::array<int,3>>>
+    levels(const std::vector<std::array<int,3>>& cells_per_dim_levels,
                                                 std::vector<std::array<int,3>> start_ijk_levels,
                                                 std::vector<std::array<int,3>> end_ijk_levels)
     {
         //assert(cells_per_dim_levels.size() == total_levels && start_ijk_levels.size() == total_levels);
-        // std::vector<std::array<int,3>> parents_to_children; // {parent level, parent index, (one) child index}
+        std::vector<std::array<int,3>> parents_to_children; // {parent level, parent index, (one) child index}
         //child_to_parent;
         std::array<CpGridData, total_levels> levels;
         for (int l = 0; l < total_levels; ++l) {
@@ -341,11 +342,11 @@ public:
             std::array<int,3> parents_dim = {end_ijk_levels[l+1][0]-start_ijk_levels[l+1][0],
                 end_ijk_levels[l+1][1]-start_ijk_levels[l+1][1],
                 end_ijk_levels[l+1][2]-start_ijk_levels[l+1][2]};
-            std::vector<std::tuple<int,std::vector<int>>> parent_to_children;
+            //std::vector<std::array<int,3>> parent_to_children; // {parent level, parent index, child index}
             //   int parent_to_children_size = cells_per_dim_levels[l+1][0]*parents_dim[0]
             //    *cells_per_dim_levels[l+1][1]*parents_dim[1]*cells_per_dim_levels[l+1][2]*parents_dim[2];
-            parent_to_children.reserve(cells_per_dim_levels[l+1][0]*parents_dim[0]
-                *cells_per_dim_levels[l+1][1]*parents_dim[1]*cells_per_dim_levels[l+1][2]*parents_dim[2]);
+            //parent_to_children.reserve(cells_per_dim_levels[l+1][0]*parents_dim[0]
+            //  *cells_per_dim_levels[l+1][1]*parents_dim[1]*cells_per_dim_levels[l+1][2]*parents_dim[2]);
             for (int k = 0; k < parents_dim[2]; ++k) {
                 for (int j = 0; j < parents_dim[1]; ++j) {
                     for (int i = 0; i < parents_dim[0]; ++i) {
@@ -356,7 +357,7 @@ public:
                         for (int t = cells_per_dim_levels[l+1][2]*k; t < cells_per_dim_levels[l+1][2]*(k+1); ++t) {
                             for (int s = cells_per_dim_levels[l+1][1]*j; s < cells_per_dim_levels[l+1][1]*(j+1); ++s) {
                                 for (int r = cells_per_dim_levels[l+1][0]*i; r <cells_per_dim_levels[l+1][0]*(i+1); ++r) {
-                                    parent_to_children.push_back({parent_idx,
+                                    parents_to_children.push_back({l, parent_idx,
                                         levels[l+1].global_cell_[(t*(levels[l+1].logical_cartesian_size_[0])
                                                                 *(levels[l+1].logical_cartesian_size_[1]))
                                                                  + (s*(levels[l+1].logical_cartesian_size_[0]))
@@ -369,7 +370,7 @@ public:
             } // end k-for-loop
             
         }
-         return levels;
+        return levels, parents_to_children;
     }
     
     
