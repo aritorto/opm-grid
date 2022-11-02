@@ -255,16 +255,14 @@ public:
         ijk[1] = gc % logical_cartesian_size_[1];
         ijk[2] = gc / logical_cartesian_size_[1];
     }
-    
-    // Refine a (connected block of cells) patch
-    // REFINE A PATCH of CONNECTED (CONSECUTIVE in each direction) cells with 'uniform' regular intervals.
-    // (meaning that the amount of children per cell is the same for all parent cells (cells of the patch).
-    // @param cells_per_dim                 The number of sub-cells in each direction (for each cell).
-    //                                      EACH parent cell will have (\Pi_{l=0}^2 cells_per_dim[l]) children cells.
-    // @param start_ijk                     The minimum values of i,j, k to construct the patch.
-    // @param end_ijk                       The maximum values of i,j,k to construct the patch.
-    CpGridData refine_block_patch(const std::array<int,3>& cells_per_dim,
-                                  std::array<int,3> start_ijk, std::array<int,3> end_ijk)
+
+
+    // Refine a single cell and return a CpGridData object
+    // REFINE A SINGLE CELL
+    // @param cells_per_dim                 Number of sub-cells in each direction.
+    // @param parent_ijk                    Parent ijk index
+    CpGridData refine_single_cell(const std::array<int,3>& cells_per_dim,
+                                  std::array<int,3> parent_ijk)
     {
         CpGridData refined_grid;
         DefaultGeometryPolicy& children_geometries = refined_grid.geometry_;
@@ -274,108 +272,137 @@ public:
         cpgrid::OrientedEntityTable<1,0>& children_face_to_cell = refined_grid.face_to_cell_;
         cpgrid::EntityVariable<enum face_tag,1>& children_face_tags = refined_grid.face_tag_;
         cpgrid::SignedEntityVariable<Dune::FieldVector<double,3>,1>& children_face_normals = refined_grid.face_normals_;
-
-        // Patch information (built from the grid).
-        const std::array<int,3> patch_dim = {end_ijk[0]-start_ijk[0], end_ijk[1]-start_ijk[1], end_ijk[2]-start_ijk[2]};
-        std::vector<int> patch_cells_indices;
-        patch_cells_indices.reserve(patch_dim[0]*patch_dim[1]*patch_dim[2]);
-        for (int k = 0; k < patch_dim[2]; ++k) {
-            for (int j = 0; j < patch_dim[1]; ++j) {
-                for (int i = 0; i < patch_dim[0]; ++i) {
-                    patch_cells_indices.push_back(global_cell_[((start_ijk[2]+ k)*logical_cartesian_size_[0]*logical_cartesian_size_[1])
-                                                               + ((start_ijk[1]+j)*logical_cartesian_size_[1])
-                                                               + start_ijk[0] +i]);
-                } // end i-for-loop
-            } // end j-for-loop
-        } // end k-for-loop
-        std::vector<cpgrid::Geometry<3,3>> patch_to_refine;
-        std::vector<std::array<int,8>> parents_cell_to_point;  // old "parents_cell8corners_indices_storage"
-        patch_to_refine.reserve(patch_dim[0]*patch_dim[1]*patch_dim[2]);
-        parents_cell_to_point.reserve(patch_dim[0]*patch_dim[1]*patch_dim[2]);
-        for (auto idx : patch_cells_indices) {
-            patch_to_refine.push_back((geometry_.geomVector(std::integral_constant<int,0>()))[EntityRep<0>(idx, true)]);
-            parents_cell_to_point.push_back(cell_to_point_[idx]);
-        }
-        // Construct the Geometry of the CEELfied PATCH.
-        DefaultGeometryPolicy cellfied_patch_geometry;
-        cpgrid::Geometry<3,3> cellfied_patch = cellfied_patch.cellfy_a_patch(patch_to_refine,
-                                                                             patch_cells_indices,
-                                                                             patch_dim,
-                                                                             parents_cell_to_point,
-                                                                             cellfied_patch_geometry);
-        // Refine the cell "cellfied_patch"
-        cellfied_patch.refine({cells_per_dim[0]*patch_dim[0], cells_per_dim[1]*patch_dim[1], cells_per_dim[2]*patch_dim[2]},
-                              children_geometries,
-                              children_cell_to_point,
-                              children_cell_to_face,
-                              children_face_to_point,
-                              children_face_to_cell,
-                              children_face_tags,
-                              children_face_normals);
+        // Get parent index
+        int parent_idx = (parent_ijk[2]*logical_cartesian_size_[0]*logical_cartesian_size_[1])
+            + (parent_ijk[1]*logical_cartesian_size_[1]) + parent_ijk[0];
+        // Get parent cell
+        cpgrid::Geometry<3,3> parent_cell = geometry_.geomVector(std::integral_constant<int,0>())[EntityRep<0>(parent_idx, true)];
+        // Refine parent cell
+        parent_cell.refine({cells_per_dim[0], cells_per_dim[1], cells_per_dim[2]},
+                           children_geometries,
+                           children_cell_to_point,
+                           children_cell_to_face,
+                           children_face_to_point,
+                           children_face_to_cell,
+                           children_face_tags,
+                           children_face_normals);
         return refined_grid;
     }
     
-    // Construct levels. Refinement based on 'block patches' with 'uniform' regular intervals (may differ from level to level).
-    // @param cells_per_dim_levels          The number of sub-cells in each direction (for each cell), in each level.
-    // @param start_ijk                     The minimum values of i,j, k to construct the patch, in each level.
-    // @param end_ijk                       The maximum values of i,j,k to construct the patch, in each level.
-    // Amount of levels known
-    template<int total_levels>
-    std::tuple<std::array<CpGridData, total_levels>,std::vector<std::array<int,3>>>
-    levels(const std::vector<std::array<int,3>>& cells_per_dim_levels,
-                                                std::vector<std::array<int,3>> start_ijk_levels,
-                                                std::vector<std::array<int,3>> end_ijk_levels)
-    {
-        //assert(cells_per_dim_levels.size() == total_levels && start_ijk_levels.size() == total_levels);
-        std::vector<std::array<int,3>> parents_to_children; // {parent level, parent index, (one) child index}
-        //child_to_parent;
-        std::array<CpGridData, total_levels> levels;
-        for (int l = 0; l < total_levels; ++l) {
-            // assert(start_ijk_levels[l+1][0] < cells_per_dim_levels[l][0]);
-            // assert(start_ijk_levels[l+1][1] < cells_per_dim_levels[l][1]);
-            // assert(start_ijk_levels[l+1][2] < cells_per_dim_levels[l][2]);
-            levels[l] = refine_block_patch(cells_per_dim_levels[l], start_ijk_levels[l], end_ijk_levels[l]);
-            /* std::vector<std::array<int,3>> parents_indices;
-               parents_indices.resize(end_ijk_levels[l][0] - start_ijk_levels[l][0],
-               end_ijk_levels[l][1] - start_ijk_levels[l][1],
-               end_ijk_levels[l][2] - start_ijk_levels[l][2]);*/
-            std::array<int,3> parents_dim = {end_ijk_levels[l+1][0]-start_ijk_levels[l+1][0],
-                end_ijk_levels[l+1][1]-start_ijk_levels[l+1][1],
-                end_ijk_levels[l+1][2]-start_ijk_levels[l+1][2]};
-            //std::vector<std::array<int,3>> parent_to_children; // {parent level, parent index, child index}
-            //   int parent_to_children_size = cells_per_dim_levels[l+1][0]*parents_dim[0]
-            //    *cells_per_dim_levels[l+1][1]*parents_dim[1]*cells_per_dim_levels[l+1][2]*parents_dim[2];
-            //parent_to_children.reserve(cells_per_dim_levels[l+1][0]*parents_dim[0]
-            //  *cells_per_dim_levels[l+1][1]*parents_dim[1]*cells_per_dim_levels[l+1][2]*parents_dim[2]);
-            for (int k = 0; k < parents_dim[2]; ++k) {
-                for (int j = 0; j < parents_dim[1]; ++j) {
-                    for (int i = 0; i < parents_dim[0]; ++i) {
-                        int parent_idx = levels[l].global_cell_[((start_ijk_levels[l+1][2]+ k)*(levels[l].logical_cartesian_size_[0])
-                                                                *(levels[l].logical_cartesian_size_[1]))
-                                                               + ((start_ijk_levels[l+1][1]+j)*(levels[l].logical_cartesian_size_[0]))
-                                                                + start_ijk_levels[l+1][0] +i];
-                        for (int t = cells_per_dim_levels[l+1][2]*k; t < cells_per_dim_levels[l+1][2]*(k+1); ++t) {
-                            for (int s = cells_per_dim_levels[l+1][1]*j; s < cells_per_dim_levels[l+1][1]*(j+1); ++s) {
-                                for (int r = cells_per_dim_levels[l+1][0]*i; r <cells_per_dim_levels[l+1][0]*(i+1); ++r) {
-                                    parents_to_children.push_back({l, parent_idx,
-                                        levels[l+1].global_cell_[(t*(levels[l+1].logical_cartesian_size_[0])
-                                                                *(levels[l+1].logical_cartesian_size_[1]))
-                                                                 + (s*(levels[l+1].logical_cartesian_size_[0]))
-                                                                + r]});
-                                } // end r-for-loop
-                            } // end s-for-loop
-                        } // end t-for-loop
-                    } // end i-for-loop
-                } // end j-for-loop
-            } // end k-for-loop
-            
-        }
-        return levels, parents_to_children;
-    }
-    
-    
-    
 
+    // Refine a (connected block of cells) patch
+    // REFINE A PATCH of CONNECTED (CONSECUTIVE in each direction) cells with 'uniform' regular intervals.
+    // (meaning that the amount of children per cell is the same for all parent cells (cells of the patch).
+    // @param cells_per_dim                 The number of sub-cells in each direction (for each cell).
+    //                                      EACH parent cell will have (\Pi_{l=0}^2 cells_per_dim[l]) children cells.
+    // @param start_ijk                     The minimum values of i,j, k to construct the patch.
+    // @param end_ijk                       The maximum values of i,j,k to construct the patch.
+    // CpGridData
+    void refine_blocked_patch(const std::array<int,3>& cells_per_dim,
+                                  std::array<int,3> start_ijk, std::array<int,3> end_ijk)
+    {
+        CpGridData refined_grid;
+        DefaultGeometryPolicy& children_geometries = refined_grid.geometry_;
+        std::vector<std::array<int,8>>& children_cell_to_point = refined_grid.cell_to_point_; // CHECK CORRECT TYPE
+        cpgrid::OrientedEntityTable<0,1>& children_cell_to_face = refined_grid.cell_to_face_;
+        Opm::SparseTable<int>& children_face_to_point = refined_grid.face_to_point_;
+        cpgrid::OrientedEntityTable<1,0>& children_face_to_cell = refined_grid.face_to_cell_;
+        cpgrid::EntityVariable<enum face_tag,1>& children_face_tags = refined_grid.face_tag_;
+        cpgrid::SignedEntityVariable<Dune::FieldVector<double,3>,1>& children_face_normals = refined_grid.face_normals_;
+        std::vector<std::array<int,3>> parents_to_children; // {parent index in coarse grid, child index in refined grid}
+        std::vector<std::array<int,3>> children_to_parents; // {child index in refined grid, parent index in coarse grid}
+
+        EntityVariableBase<cpgrid::Geometry<0,3>>& children_corners =
+            children_geometries.geomVector(std::integral_constant<int,3>());
+        EntityVariableBase<cpgrid::Geometry<2,3>>& children_faces =
+            children_geometries.geomVector(std::integral_constant<int,1>());
+        EntityVariableBase<cpgrid::Geometry<3,3>>& children_cells =
+            children_geometries.geomVector(std::integral_constant<int,0>());
+        //  EntityVariableBase<cpgrid::OrientedEntityTable<0,1>>& mutable_children_cell_to_face = children_cell_to_face;
+        //EntityVariableBase<Opm::SparseTable<int>>& mutable_children_face_to_point = children_face_to_point;
+        // EntityVariableBase<cpgrid::OrientedEntityTable<1,0>> mutable_children_face_to_cell = children_face_to_cell;
+        EntityVariableBase<enum face_tag>& mutable_children_face_tags = children_face_tags;
+        EntityVariableBase<PointType>& mutable_children_face_normals = children_face_normals;
+        
+        std::array<int,3> patch_dim = {end_ijk[0]-start_ijk[0], end_ijk[1]-start_ijk[1], end_ijk[2]-start_ijk[2]};
+        std::array<int,3> total_children_per_dim = { cells_per_dim[0]*patch_dim[0], cells_per_dim[1]*patch_dim[1],
+            cells_per_dim[2]*patch_dim[2]};
+        // Determine total refined corners (from all children, all parents)
+        children_corners.resize((total_children_per_dim[0]+1)*(total_children_per_dim[1]+1)*(total_children_per_dim[2]+1));
+        // Determine total refined faces (from all children, all parents)
+        int children_faces_size =
+            (total_children_per_dim[0]*total_children_per_dim[1]*(total_children_per_dim[2]+1)) // 'bottom/top faces'
+            + ((total_children_per_dim[0]+1)*total_children_per_dim[1]*total_children_per_dim[2]) // 'left/right faces'
+            + (total_children_per_dim[0]*(total_children_per_dim[1]+1)*total_children_per_dim[2]); // 'front/back faces'
+        children_faces.resize(children_faces_size);
+        //children_face_to_point.resize(children_faces_size);
+        // children_face_to_cell.resize(children_faces_size);
+        mutable_children_face_tags.resize(children_faces_size);
+        mutable_children_face_normals.resize(children_faces_size);
+        // Determine total refined cells (all children from all parents)
+        children_cells.resize(total_children_per_dim[0]*total_children_per_dim[1]*total_children_per_dim[2]);
+        children_cell_to_point.resize(total_children_per_dim[0]*total_children_per_dim[1]*total_children_per_dim[2]);
+        //children_cell_to_face.resize(total_children_per_dim[0]*total_children_per_dim[1]*total_children_per_dim[2]);
+        
+        for (int k = 0; k < patch_dim[2]; ++k) {
+            for (int j = 0; j < patch_dim[1]; ++j) {
+                for (int i = 0; i < patch_dim[0]; ++i) {
+                    CpGridData refined_parent_ijk = refine_single_cell(cells_per_dim, {start_ijk[0]+i, start_ijk[1]+j, start_ijk[2]+k});
+                    // Popolate children corners (without repetition!)
+                    // TO BE FIXED!
+                    /*  int aux_end_j = *std::min_element(std::begin({(j+1)*cells_per_dim[1], total_children_per_dim[1]+1}),
+                                                      std::end({(j+1)*cells_per_dim[1], total_children_per_dim[1]+1}));
+                    int aux_end_i = *std::min_element(std::begin({(i+1)*cells_per_dim[1], total_children_per_dim[0]+1}),
+                                                      std::end({(i+1)*cells_per_dim[1], total_children_per_dim[0]+1}));
+                    int aux_end_k = *std::min_element(std::begin({(k+1)*cells_per_dim[2], total_children_per_dim[2]+1}),
+                                                      std::end({(k+1)*cells_per_dim[2], total_children_per_dim[2]+1}));
+                    for (int m = j*cells_per_dim[1]; m < aux_end_j; ++m) { // (j+1)*cells_per_dim[1]
+                        for (int l = i*cells_per_dim[0]; l < aux_end_i; ++l) { // (i+1)*cells_per_dim[0]
+                            for (int n = k*cells_per_dim[2]; n < aux_end_k; ++n) { //(k+1)*cells_per_dim[2]
+                                int refined_corner_idx = (m*(total_children_per_dim[0]+1)*(total_children_per_dim[2]+1))
+                                    + (l*(total_children_per_dim[2]+1)) +n;
+                                int refined_corner_from_parent_grid_idx = (m*(cells_per_dim[0]+1)*(cells_per_dim[2]+1))
+                                    + (l*(cells_per_dim[2]+1)) +n;
+                                children_corners[refined_corner_idx] =
+                                    refined_parent_ijk.geometry_.geomVector(std::integral_constant<int,3>())
+                                    [EntityRep<3>(refined_corner_from_parent_grid_idx, true)];
+                            } // end n-for-loop
+                        } // end l-for-loop
+                    } // end m-for-lopp
+                     for (int m = total_children_per_dim[1]; ++m) { // (j+1)*cells_per_dim[1]
+                         for (int l = i*cells_per_dim[0]; l < (i+1)*cells_per_dim[0]; ++l) { // (i+1)*cells_per_dim[0]
+                             for (int n = k*cells_per_dim[2]; n < (k+1)*cells_per_dim[2]; ++n) { //(k+1)*cells_per_dim[2]
+                                int refined_corner_idx = (m*(total_children_per_dim[0]+1)*(total_children_per_dim[2]+1))
+                                    + (l*(total_children_per_dim[2]+1)) +n;
+                                int refined_corner_from_parent_grid_idx = (m*(cells_per_dim[0]+1)*(cells_per_dim[2]+1))
+                                    + (l*(cells_per_dim[2]+1)) +n;
+                                children_corners[refined_corner_idx] =
+                                    refined_parent_ijk.geometry_.geomVector(std::integral_constant<int,3>())
+                                    [EntityRep<3>(refined_corner_from_parent_grid_idx, true)];
+                            } // end n-for-loop
+                        } // end l-for-loop
+                     } // end m-for-lopp */
+                    // Populate children faces (without repetition!)
+                    // Populate children cells
+                    for (int n = k*cells_per_dim[2]; n < (k+1)*cells_per_dim[2]; ++n) { // (j+1)*cells_per_dim[1]
+                        for (int m = j*cells_per_dim[1]; m < (j+1)*cells_per_dim[1]; ++m) { // (i+1)*cells_per_dim[0]
+                            for (int l = i*cells_per_dim[0]; l < (i+1)*cells_per_dim[0]; ++l) { //(k+1)*cells_per_dim[2]
+                                int refined_cell_idx = (n*total_children_per_dim[0]*total_children_per_dim[1])
+                                    + (m*total_children_per_dim[0]) +l;
+                                int refined_cell_from_parent_grid_idx = (n*cells_per_dim[0]*cells_per_dim[1])
+                                    + (m*cells_per_dim[0]+1) +l;
+                                children_cells[refined_cell_idx] =
+                                    refined_parent_ijk.geometry_.geomVector(std::integral_constant<int,0>())
+                                    [EntityRep<0>(refined_cell_from_parent_grid_idx, true)];
+                            } // end n-for-loop
+                        } // end l-for-loop
+                    } // end m-for-lopp      
+                } // end i-for-loop
+            } // end j-for-loop
+        } // end k-for-loop
+        //  return ;
+        
+    }     
 
     // Make unique boundary ids for all intersections.
     void computeUniqueBoundaryIds();

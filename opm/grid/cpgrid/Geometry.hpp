@@ -626,6 +626,12 @@ namespace Dune
              * @param global_refined_cell8corners_indices_storage  A vector to store the indices of the 8 corners of each new cell.
              */
             typedef Dune::FieldVector<double,3> PointType;
+            /*  std::tuple<DafaultGeometryPolicy,
+                       std::vector<std::array<int,8>>,
+                       cpgrid::OrientedEntityTable<0,1>,
+                       Opm::SparseTable<int>,
+                       cpgrid::EntityVariable<enum face_tag, 1>
+                       > */
             void refine(const std::array<int,3>& cells_per_dim,
                         DefaultGeometryPolicy& all_geom,
                         std::vector<std::array<int,8>>&  global_refined_cell8corners_indices_storage,
