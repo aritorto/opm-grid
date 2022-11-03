@@ -384,9 +384,9 @@ public:
                      } // end m-for-lopp */
                     // Populate children faces (without repetition!)
                     // Populate children cells
-                    for (int n = k*cells_per_dim[2]; n < (k+1)*cells_per_dim[2]; ++n) { // (j+1)*cells_per_dim[1]
-                        for (int m = j*cells_per_dim[1]; m < (j+1)*cells_per_dim[1]; ++m) { // (i+1)*cells_per_dim[0]
-                            for (int l = i*cells_per_dim[0]; l < (i+1)*cells_per_dim[0]; ++l) { //(k+1)*cells_per_dim[2]
+                    for (int n = k*cells_per_dim[2]; n < (k+1)*cells_per_dim[2]; ++n) { 
+                        for (int m = j*cells_per_dim[1]; m < (j+1)*cells_per_dim[1]; ++m) { 
+                            for (int l = i*cells_per_dim[0]; l < (i+1)*cells_per_dim[0]; ++l) { 
                                 int refined_cell_idx = (n*total_children_per_dim[0]*total_children_per_dim[1])
                                     + (m*total_children_per_dim[0]) +l;
                                 int refined_cell_from_parent_grid_idx = (n*cells_per_dim[0]*cells_per_dim[1])
@@ -394,6 +394,11 @@ public:
                                 children_cells[refined_cell_idx] =
                                     refined_parent_ijk.geometry_.geomVector(std::integral_constant<int,0>())
                                     [EntityRep<0>(refined_cell_from_parent_grid_idx, true)];
+                                // Populate "children_cell_to_point"
+                                children_cell_to_point[refined_cell_idx] =
+                                    refined_parent_ijk.cell_to_point_[refined_cell_from_parent_grid_idx];
+                                // Populate "children_cell_to_face"
+                                // children_cell_to_face[refined_cell_idx] = refined_parent_ijk.cell_to_face_[refined_cell_from_parent_grid_idx];
                             } // end n-for-loop
                         } // end l-for-loop
                     } // end m-for-lopp      
