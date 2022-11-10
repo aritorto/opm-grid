@@ -658,7 +658,7 @@ namespace Dune
             }
         }
 
-        /*  // GET LEAF VIEW -------------- IN PROGRESS
+        // GET LEAF VIEW -------------- IN PROGRESS
         typedef Dune::FieldVector<double,3> PointType;
         std::shared_ptr<Dune::cpgrid::CpGridData> getLeafView(std::vector<std::shared_ptr<Dune::cpgrid::CpGridData>> data,
                                                               std::vector<std::array<int,2>> future_leaf_view,
@@ -705,7 +705,7 @@ namespace Dune
             //   with the order from bottom to top-from left to right- from front to back, and so on...
             for (auto idx : future_leaf_corners) {
                 leaf_corners.push_back((*data[idx[0]]).geometry_.geomVector(std::integral_constant<int,3>())
-                                       [Dune::cpgrid::EntityRep<0>(idx[1], true)]);   
+                                       [Dune::cpgrid::EntityRep<3>(idx[1], true)]);
             }
 
             // Get total cells in the leaf view (possibly coming from different levels).
@@ -730,7 +730,7 @@ namespace Dune
     
             return leaf_view_ptr;
            }
-        */
+
 
         
         /*  No refinement implemented. GridDefaultImplementation's methods will be used.
