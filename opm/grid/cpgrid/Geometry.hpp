@@ -607,6 +607,71 @@ namespace Dune
             {
                 return false;
             }
+
+            // Auxiliary/temporary function to get boundary and inner refined corners, from a given cell
+            std::tuple<std::vector<Dune::cpgrid::Geometry<0,3>>, // front 
+                       std::vector<Dune::cpgrid::Geometry<0,3>>, // back
+                       std::vector<Dune::cpgrid::Geometry<0,3>>, // left
+                       std::vector<Dune::cpgrid::Geometry<0,3>>, // right
+                       std::vector<Dune::cpgrid::Geometry<0,3>>, // bottom
+                       std::vector<Dune::cpgrid::Geometry<0,3>>, // top
+                       std::vector<Dune::cpgrid::Geometry<0,3>>> getBoundaryInnerRefinedCorners(const std::array<int,3>& cells_per_dim)
+            {
+                std::vector<Dune::cpgrid::Geometry<0,3>> refined_boundary_front_corners;
+                std::vector<Dune::cpgrid::Geometry<0,3>> refined_boundary_back_corners;
+                std::vector<Dune::cpgrid::Geometry<0,3>> refined_boundary_left_corners;
+                std::vector<Dune::cpgrid::Geometry<0,3>> refined_boundary_right_corners;
+                std::vector<Dune::cpgrid::Geometry<0,3>> refined_boundary_bottom_corners;
+                std::vector<Dune::cpgrid::Geometry<0,3>> refined_boundary_top_corners;
+                std::vector<Dune::cpgrid::Geometry<0,3>> refined_inner_corners;
+                refined_boundary_front_corners.resize((cells_per_dim[0]+1)*(cells_per_dim[2]+1));
+                refined_boundary_back_corners.resize((cells_per_dim[0]+1)*(cells_per_dim[2]+1));
+                refined_boundary_left_corners.resize((cells_per_dim[1]+1)*(cells_per_dim[2]+1));
+                refined_boundary_right_corners.resize((cells_per_dim[1]+1)*(cells_per_dim[2]+1));
+                refined_boundary_bottom_corners.resize((cells_per_dim[1]+1)*(cells_per_dim[0]+1));
+                refined_boundary_top_corners.resize((cells_per_dim[1]+1)*(cells_per_dim[0]+1));
+                refined_inner_corners.resize(cells_per_dim[0]*cells_per_dim[1]*cells_per_dim[2]);
+                  for (int j = 0; j < cells_per_dim[1] + 1; ++j) {
+                    for (int i = 0; i < cells_per_dim[0] + 1; ++i) {
+                        for (int k = 0; k < cells_per_dim[2] + 1; ++k) {
+                            // Compute the index of each global refined corner associated with 'jik'.
+                            // int refined_corner_idx =
+                            //    (j*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + (i*(cells_per_dim[2]+1)) +k;
+                            // Compute the local refined corner of the unit/reference cube associated with 'jik'.
+                            const LocalCoordinate& local_refined_corner = {
+                                double(i)/cells_per_dim[0], double(j)/cells_per_dim[1], double(k)/cells_per_dim[2] };
+                            // Compute the global refined corner 'jik' and add it in its corresponfing entry in "refined_corners".
+                            if (j == 0) {
+                                refined_boundary_front_corners.push_back(Geometry<0, 3>(this->global(local_refined_corner)));
+                            }
+                            if (j == cells_per_dim[1]) {
+                                refined_boundary_back_corners.push_back(Geometry<0, 3>(this->global(local_refined_corner)));
+                            }
+                            if (i == 0) {
+                                refined_boundary_left_corners.push_back(Geometry<0, 3>(this->global(local_refined_corner)));
+                            }
+                            if (i == cells_per_dim[0]) {
+                                refined_boundary_right_corners.push_back(Geometry<0, 3>(this->global(local_refined_corner)));
+                            }
+                            if (k == 0) {
+                                refined_boundary_bottom_corners.push_back(Geometry<0, 3>(this->global(local_refined_corner)));
+                            }
+                            if (k == cells_per_dim[2]) {
+                                refined_boundary_top_corners.push_back(Geometry<0, 3>(this->global(local_refined_corner)));
+                            }
+                            else {
+                                refined_inner_corners.push_back(Geometry<0, 3>(this->global(local_refined_corner)));
+                            }
+                        } // end k-for-loop
+                    } // end i-for-loop
+                } // end j-for-loop
+                  return std::make_tuple(refined_boundary_front_corners, refined_boundary_back_corners,
+                                         refined_boundary_left_corners, refined_boundary_right_corners,
+                                         refined_boundary_bottom_corners, refined_boundary_top_corners,
+                                         refined_inner_corners);
+            }
+            
+            
             
             /**
              * @brief Refine a single cell with regular intervals.
