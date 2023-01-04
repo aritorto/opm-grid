@@ -1180,15 +1180,7 @@ namespace Dune
             }
             // Rewrite the keys of isParent_cells to incorporate the new parents.
             isParent_cells[cells2refine[cell]] = true;
-
-            // Get corners lying on faces that got refined, so that we do not repeat them in the LeafView.
-            // Idea: we can read corners on the faces of each parent.
-            
             }
-            
-            // How to get the
-            
-            
             
             // Two different cells can be completely disjoint, or can intersect in only one corner (they do not
             // share any edge or face), more than one corner. In the case they share more than one corner, they may share
@@ -1199,12 +1191,27 @@ namespace Dune
             std::vector<int> parent_corners;
             // Parent faces. May repeat indices. 
             // std::vector<int> parent_faces;
-            for (auto& cell : cells2refine) {
+            // To store the refined corners of the set of cells that got refined, without repetition.
+            // CONTAINER 
+            for (int cell = 0; cell < cells2refine.size(); ++cell) {
             // Parent cell corners.
-                std::array<int,8> cell2point  = (*data[0]).cell_to_point_[cell];
-                for (int corn = 0; corn < 8; ++corn) {
-                    parent_corners.push_back(cell2point[corn]);
-                    }
+                //     std::array<int,8> cell2point  = (*data[0]).cell_to_point_[cell];
+                //for (int corn = 0; corn < 8; ++corn) {
+                //  parent_corners.push_back(cell2point[corn]);
+                //   }
+                // Boundary refined corners.
+                // Boundary front,back,left,right,bottom,top
+                // Inner refined corners.
+                const auto& [b_front, b_back, b_left, b_right, b_bottom, b_top, inner]
+                    = (*data[0]).geometry_.geomVector(std::integral_constant<int,0>())
+                    [Dune::cpgrid::EntityRep<0>(cell, true)].getBoundaryInnerRefinedCorners(cells_per_dim);
+                // Store the inner corners (they are unique no matter possible neighboring cells)
+                // STORE THEM...
+                /*     for (int other_cell = 0; other_cell < cells2refine.size(); ++other_cell) {
+                    if (cell != other_cell)
+                        // for loop in cell faces
+                        // check if one of the other_cell faces coincides 
+                        }   */
             }
             
             // Parent cell faces.
@@ -1269,7 +1276,7 @@ namespace Dune
                 // Auxiliary bool to check if a corner from level 0 is a corner of a parent cell
                 bool isThere_corn = false;
                 // Check if the corner does not belong to the patch. In that case, store it.
-                for(auto& parent_corn : parent_corners) { // sorted_parent_corners does not repeat indices.
+                for(auto& parent_corn : parent_corners) { // parent_corners does not repeat indices.
                     isThere_corn = isThere_corn || (corner == parent_corn);
                     //true-> corn coincides with one parent cell corns
                     //false-> corn does not belong to any cell that got refined.
