@@ -1229,6 +1229,8 @@ namespace Dune
                 }
             }
         };
+    // HERE OPERATOR<
+    
     } // namespace cpgrid
 
     template< int mydim, int cdim >

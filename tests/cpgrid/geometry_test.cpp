@@ -514,7 +514,7 @@ void refine_and_check(const cpgrid::Geometry<3, 3>& parent_geometry,
     std::array<int, 3> end_ijk = {3,2,3};  // then patch_dim = {3-1,2-0,3-1} ={2,2,2}
     coarse_grid.createCartesian(coarse_grid_dim, cell_sizes_new);
     // Call refinedBlockPatch()
-    coarse_grid.current_view_data_->refineBlockPatch(cells_per_dim_patch, start_ijk, end_ijk);
+    coarse_grid.current_view_data_->refineBlockPatch(cells_per_dim_patch, start_ijk, end_ijk); 
     // Create a pointer pointing at the CpGridData object coarse_grid.current_view_data_.
     std::shared_ptr<Dune::cpgrid::CpGridData> coarse_grid_ptr =  std::make_shared<Dune::cpgrid::CpGridData>();
     *coarse_grid.current_view_data_ = *coarse_grid_ptr;
