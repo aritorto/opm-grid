@@ -298,7 +298,6 @@ public:
         // Integers to compute face indices.
         int i_grid_faces = (grid_dim[0]+1)*grid_dim[1]*grid_dim[2];
         int j_grid_faces = grid_dim[0]*(grid_dim[1]+1)*grid_dim[2];
-        int k_grid_faces = grid_dim[0]*grid_dim[1]*(grid_dim[2]+1);
         // I_FACES
         for (int j = start_ijk[1]; j < end_ijk[1]; ++j) {
             for (int i = start_ijk[0]; i < end_ijk[0]+1; ++i) {
@@ -644,7 +643,7 @@ public:
         // If the patch contains only one cell:
         if ((patch_dim[0] == 1) && (patch_dim[1] == 1) && (patch_dim[2] == 1)){
             const int& parent_cell = (start_ijk[2]*grid_dim[0]*grid_dim[1]) + (start_ijk[1]*grid_dim[0]) +start_ijk[0];
-            auto [refined_grid_ptr, parent_to_refined_corners,
+            auto [refined_grid_ptr0, parent_to_refined_corners,
                   parent_to_children_faces, parent_to_children_cells,child_to_parent_faces, child_to_parent_cell,
                   isParent_faces, isParent_cells] = this->refineSingleCell(cells_per_dim, parent_cell);
             // When the patch is only one cell,
@@ -652,7 +651,7 @@ public:
             // - boundary_old_to_new_faces == parent_to_children_faces.
             // Fix the type of parent_to_children_cells to return it correctly.
             std::vector<std::tuple<int, std::vector<int>>> parent_to_children_cells_vec = {parent_to_children_cells};
-            return {refined_grid_ptr, parent_to_refined_corners,
+            return {refined_grid_ptr0, parent_to_refined_corners,
                 parent_to_children_faces, parent_to_children_faces, parent_to_children_cells_vec,
                 child_to_parent_faces, child_to_parent_cell,
                 isParent_faces, isParent_cells};
@@ -730,8 +729,8 @@ public:
             // Boundary patch faces.
             std::vector<int> boundary_patch_faces;
             // Auxiliary integers to simplify notation.
-            int bound_patch_faces = 2*patch_dim[1]*patch_dim[2]; // left/right boundary
-            +  patch_dim[0]*2*patch_dim[2]; // front/back boundary
+            int bound_patch_faces = 2*patch_dim[1]*patch_dim[2] // left/right boundary
+            +  patch_dim[0]*2*patch_dim[2] // front/back boundary
             + patch_dim[0]*patch_dim[1]*2; // bottom/top boundary
             boundary_patch_faces.reserve(bound_patch_faces);
             // Boundary old faces associated with its (new born) children faces.
