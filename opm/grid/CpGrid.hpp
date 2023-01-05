@@ -1163,18 +1163,18 @@ namespace Dune
             // to the corner index from level 0, when first entry is > -1, it corresponds to the corner index
             // from the LRG of the parent cell).
             // MODIFY DOCUMENTATION, ONLY REFINED CORNERS HERE
-            std::map<Dune::cpgrid::Geometry<0,3>,std::array<int,2>> globalCoord_to_cornId;
+            std::map<Dune::cpgrid::Geometry<0,3>, std::array<int,2>> globalCoord_to_cornId;
             // Reverse map
             std::map<std::array<int,2>,Dune::cpgrid::Geometry<0,3>> cornId_to_globalCoord;
             
             
             // Build one LRG for each cell that get refined. We'll store only one final CpGridData object as a new entry in "data".
-            for (int cell = 0; cell< num_cells2refine; ++cell) {
+            for (auto& cell : cells2refine) {
             // Build level from the selected cell from level 0 (level 0 = data[0]).
             const auto& [level_ptr, parent_to_refined_corners,
                          parent_to_children_faces, parent_to_children_cells, child_to_parent_faces, child_to_parent_cell,
                          level_isParent_faces, level_isParent_cells]
-                = (*data[0]).refineSingleCell(cells_per_dim, cells2refine[cell]);
+                = (*data[0]).refineSingleCell(cells_per_dim, cell);
             // Add the level to the auxiliary vector with grids. 
             aux_grids.push_back(level_ptr);
             // Add parent_to_refined_corners.
@@ -1192,13 +1192,22 @@ namespace Dune
                 isParent_faces[std::get<0>(parent_face)] = true;
             }
             // Rewrite the keys of isParent_cells to incorporate the new parents.
-            isParent_cells[cells2refine[cell]] = true;
-            // Add refined corners
-            for (auto& corn : (*level_ptr).geometry_.geomVector(std::integral_constant<int,3>())){
-                all_corners_repetition.push_back(corn.center());
+            isParent_cells[cell] = true;
+               auto level_corners =  (*level_ptr).geometry_.geomVector(std::integral_constant<int,3>());
+               
+                 int corn_count = 0;
+             for (auto& corn : level_corners){
+                auto corn_center = level_corners.get(corn_count).center();
+                  // Add refined corners
+                all_corners_repetition.push_back(corn_center);
+                // Create entries on the maps to relate refined corners with their actual global coordiantes.
+                // Notice that maps re-write a value when the key is the same, so we would not repeat them.
+                //    globalCoord_to_cornId[ corn_center ] = {cell, corn_count};
+                cornId_to_globalCoord[{cell, corn_count}] = corn_center;
+                // globalCoord_to_cornId[corn_center] = {cell, corn_count};
+                corn_count += 1;
             }
-            
-            // All refined corners WITHOUT repetition
+             // All refined corners WITHOUT repetition
             // std::set<Dune::cpgrid::Geometry<0,3>> refined_corners_set;
             std::vector<Dune::cpgrid::Geometry<0,3>> all_different_corners;
             all_different_corners.push_back(all_corners_repetition[0].center());
@@ -1209,8 +1218,9 @@ namespace Dune
                     }   
                 }
             }
+           
             
-            //} SET DOES NOT WORK WITH NO INT TYPE
+            
          
             
             /* // Compute boundary/inner refined corners, per parent cell
