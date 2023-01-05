@@ -1154,6 +1154,19 @@ namespace Dune
             for (int c = 0; c < (data[0]-> size(0)); ++c) {
             isParent_cells[c] = false;
             }
+            // All REFINED corners, with repetition. We will make a set out of it to 'remove' repeated corners.
+            std::vector<Dune::cpgrid::Geometry<0,3>> all_corners_repetition;
+            // Map to relate a corner {x,y,z} with its (if any) parent cell, index in its level.
+            // The value will be {int, std::vector<int>} where the first int takes value -1 when the corner
+            // does not come from refinenment, or parent cell index (!= -1) when the corner comes from
+            // refinement. The second integer is the corner index (when first entry is -1, it corresponds
+            // to the corner index from level 0, when first entry is > -1, it corresponds to the corner index
+            // from the LRG of the parent cell).
+            // MODIFY DOCUMENTATION, ONLY REFINED CORNERS HERE
+            std::map<Dune::cpgrid::Geometry<0,3>,std::array<int,2>> globalCoord_to_cornId;
+            // Reverse map
+            std::map<std::array<int,2>,Dune::cpgrid::Geometry<0,3>> cornId_to_globalCoord;
+            
             
             // Build one LRG for each cell that get refined. We'll store only one final CpGridData object as a new entry in "data".
             for (int cell = 0; cell< num_cells2refine; ++cell) {
@@ -1180,6 +1193,39 @@ namespace Dune
             }
             // Rewrite the keys of isParent_cells to incorporate the new parents.
             isParent_cells[cells2refine[cell]] = true;
+            // Add refined corners
+            for (auto& corn : (*level_ptr).geometry_.geomVector(std::integral_constant<int,3>())){
+                all_corners_repetition.push_back(corn.center());
+            }
+            
+            // All refined corners WITHOUT repetition
+            // std::set<Dune::cpgrid::Geometry<0,3>> refined_corners_set;
+            std::vector<Dune::cpgrid::Geometry<0,3>> all_different_corners;
+            all_different_corners.push_back(all_corners_repetition[0].center());
+            for (auto& corn : all_corners_repetition) {
+                for (auto& one_diff_corn : all_different_corners) {
+                    if ( corn.center() != one_diff_corn.center()) {
+                        all_different_corners.push_back(corn);
+                    }   
+                }
+            }
+            
+            //} SET DOES NOT WORK WITH NO INT TYPE
+         
+            
+            /* // Compute boundary/inner refined corners, per parent cell
+             const auto& [b_front, b_back, b_left, b_right, b_bottom, b_top, inner]
+                    = (*data[0]).geometry_.geomVector(std::integral_constant<int,0>())
+                    [Dune::cpgrid::EntityRep<0>(cell, true)].getBoundaryInnerRefinedCorners(cells_per_dim);
+             // Add boundary/inner refined corners in their containers.
+             all_boundary_front_refined_cornes.push_back(b_front);
+             all_boundary_back_refined_cornes.push_back(b_back);
+             all_boundary_left_refined_cornes.push_back(b_left);
+             all_boundary_right_refined_cornes.push_back(b_right);
+             all_boundary_bottom_refined_cornes.push_back(b_bottom);
+             all_boundary_top_refined_cornes.push_back(b_top);
+             all_boundary_inner_refined_cornes.push_back(inner); */
+             
             }
             
             // Two different cells can be completely disjoint, or can intersect in only one corner (they do not
