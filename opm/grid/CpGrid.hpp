@@ -885,13 +885,22 @@ namespace Dune
             for (int c = 0; c < (data[0]-> size(0)); ++c) {
                 isParent_cells[c] = false;
             }
-            // All REFINED corners, with repetition. We will make a set out of it to 'remove' repeated corners.
+            
+            // All REFINED CORNERS, with repetition. We will make a set out of it to 'remove' repeated corners.
             std::vector<Dune::cpgrid::Geometry<0,3>> all_refined_corners_repetition;
             // Map to relate a refined corner {x,y,z} with its parent cell, index in its 'level'.
             // The value will be {int parent cell index, int corner index in its LRG}
             std::map<Dune::cpgrid::Geometry<0,3>, std::array<int,2>> globalCoord_to_cornId;
             // Reverse map {parent cell index, corner index} -> {x,y,z}
             std::map<std::array<int,2>,Dune::cpgrid::Geometry<0,3>> cornId_to_globalCoord;
+
+            // All REFINED FACES, with repetition. We will make a set out of it to 'remove' repeated faces.
+            std::vector<int> all_parent_faces_repetition;
+            // Map to relate a refined face with its parent cell, index in its 'level'.
+            // The value will be {int parent cell index, int face index in its LRG}
+            std::map<int, std::array<int,2>> refinedFaceId_to_parentCellFaceId;
+            // Reverse map {parent cell index, corner index} -> {x,y,z}
+            std::map<std::array<int,2>,int> parentCellFaceId_to_refinedFaceId;
             
             
             
@@ -906,7 +915,7 @@ namespace Dune
                 aux_grids.push_back(level_ptr);
                 // Add parent_to_refined_corners.
                 all_parent_to_refined_corners.push_back(parent_to_refined_corners);
-                // Add parent corners to all_parent_corners, may repeat corners 
+                // Add parent corners to all_parent_corners_repetition, may repeat corners 
                 for (auto& parent : parent_to_refined_corners) {
                         all_parent_corners_repetition.push_back(parent[0]);
                 }
@@ -921,6 +930,8 @@ namespace Dune
                 // std::vector<std::tuple<int,std::vector<int>>. (tuple: {face idx, {child 0, child 1, ...}})
                 for (auto& parent_face : parent_to_children_faces) {
                     isParent_faces[std::get<0>(parent_face)] = true;
+                     // Add parent faces to all_parent_faces_repetition, may repeat faces 
+                    all_parent_faces_repetition.push_back(std::get<0>(parent_face));
                 }
                 // Rewrite the keys of isParent_cells to incorporate the new parents.
                 isParent_cells[cell] = true;
@@ -933,6 +944,15 @@ namespace Dune
                     globalCoord_to_cornId[corn.center()] = {cell, refined_corn_count};
                     cornId_to_globalCoord[{cell, refined_corn_count}] = corn.center();
                     refined_corn_count += 1;
+                }
+                // Auxiliary int to count refined faces. 
+                int refined_face_count = 0;
+                for (auto& face :  (*level_ptr).geometry_.geomVector(std::integral_constant<int,1>())) {
+                    // Create entries on the maps to relate refined faces with their actual global coordiantes.
+                    // Notice that maps re-write a value when the key is the same, so we would not repeat them.
+                    refinedFaceId_to_parentCellFaceId[refined_face_count] = {cell, face.index()};
+                    parentCellFaceId_to_refinedFaceId[{cell, face.index()}] = refined_face_count;
+                    refined_face_coint +=1;
                 }
             }
             // All refined corners WITHOUT repetition
@@ -952,6 +972,27 @@ namespace Dune
                 for (auto& one_diff_corn : all_different_parent_corners) {
                     if ( corn != one_diff_corn) {
                         all_different_parent_corners.push_back(corn);
+                    }   
+                }
+            }
+
+             // All refined faces WITHOUT repetition
+            std::vector<int> all_different_refined_faces;
+            all_different_refined_faces.push_back(all_refined_faces_repetition[0]);
+            for (auto& face : all_refined_faces_repetition) {
+                for (auto& one_diff_face : all_different_refined_faces) {
+                    if ( face != one_diff_face) {
+                        all_different_refined_faces.push_back(face);
+                    }   
+                }
+            }
+            // All parent faces WITHOUT repetition
+            std::vector<int> all_different_parent_faces;
+            all_different_parent_faces.push_back(all_parent_faces_repetition[0]);
+            for (auto& face : all_parent_faces_repetition) {
+                for (auto& one_diff_face : all_different_parent_faces) {
+                    if ( face != one_diff_face) {
+                        all_different_parent_faces.push_back(face);
                     }   
                 }
             }
@@ -1003,6 +1044,55 @@ namespace Dune
             for (auto& corn : all_different_refined_corners){
                 level_to_leaf_corners[globalCoord_to_cornId[corn.center()]] = corner_count; //= {cell, refined_corn_count};
             }
+            // Resize the container of the leaf corners.
+            leaf_corners.resize(corner_count);
+            for (auto& [level_levelIdx, leaf_idx] : level_to_leaf_corners) {
+                leaf_corners[leaf_idx] =
+                    (*aux_grids[level_levelIdx[0]-1]).geometry_.geomVector(std::integral_constant<int,3>()).get(level_levelIdx[1]);
+            }
+            // FACES
+            // This map will generate a consecutive index-numbering, associating this leaf index with
+            // the corresponding 'level' (-1 for non-refined faces, parent cell index for refined ones).
+            int face_count = 0;
+            std::map<std::array<int,2>, int> level_to_leaf_faces;
+            // Faces coming from the level 0, EXCLUDING parents_faces.
+            // Check all the corners from level 0.
+            for (int face = 0; face <  data[0]->face_to_cell_.size(); ++face) {
+                // Auxiliary bool to check if a face from level 0 is a face of a parent cell
+                bool isThere_face = false;
+                // Check if the corner does not belong to the faces of parent cells . In that case, store it.
+                for(auto& parent_face : all_different_parent_faces) { // does not repeat indices.
+                    isThere_face = isThere_face || (face == parent_face);
+                    //true-> face coincides with one parent cell faces
+                    //false-> face does not belong to any cell that got refined.
+                }
+                if(!isThere_face) { // face was not involved in refinement.
+                    level_to_leaf_faces[{-1, face.index()}] = face_count;
+                    face_count +=1;
+                }
+            }
+            // Add refined faces to the leaf faces
+            for (auto& face : all_different_refined_faces){ 
+                level_to_leaf_faces[refinedFaceId_to_parentCellFaceId[face]] = face_count;
+                face_count +=1;
+            }
+            // Resize the container of the leaf corners.
+            leaf_faces.resize(face_count);
+            mutable_face_tags.resize(face_count);
+            mutable_face_normals.resize(face_count);
+            for (auto& [level_levelIdx, leaf_idx] : level_to_leaf_faces) {
+                // Get face geometry
+                leaf_faces[leaf_idx] =
+                    (*aux_grids[level_levelIdx[0]-1]).geometry_.geomVector(std::integral_constant<int,1>())
+                    [Dune::cpgrid::EntityRep<1>(level_levelIdx[1], true)];
+                 // Get the face tag.
+                mutable_face_tags[leaf_idx] = (*aux_grids[level_levelIdx[0]-1]).face_tag_
+                    [Dune::cpgrid::EntityRep<1>(level_levelIdx[1], true)];
+                // Get the face normal.
+                mutable_face_normals[leaf_idx] = (*aux_grids[level_levelIdx[0]-1]).face_normals_
+                    [Dune::cpgrid::EntityRep<1>(level_levelIdx[1], true)];
+            }
+            
             
         }
         //////////////////////////////////////
