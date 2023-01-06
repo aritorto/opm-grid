@@ -797,7 +797,7 @@ namespace Dune
                         leaf_cell_to_point[leaf_idx][corn] = level_to_leaf_corners[{1, old_cell_to_point[corn]}];
                     }
                     // CELL TO FACE
-                    for (long unsigned int face = 0; face < old_cell_to_face.size(); ++face) {
+                    for (int face = 0; face < old_cell_to_face.size(); ++face) {
                         aux_cell_to_face[leaf_idx].push_back({level_to_leaf_faces[{1, old_cell_to_face[face].index()}], // neigh cell
                                 old_cell_to_face[face].orientation()}); // orientation
                     }
@@ -954,7 +954,7 @@ namespace Dune
                 // Add the amount of points to the count num_points.
                 num_points += old_face_to_point.size();
                 if (level_levelIdx[0] == 0) {
-                    for (int corn = 0; corn < old_face_to_point.size(); ++corn) { // we can put 4 here
+                    for (long unsinged int corn = 0; corn < old_face_to_point.size(); ++corn) { // we can put 4 here
                         // Check if the corner is one of the parent cell corners that got replaced by a refined one.
                         // In that case, we use the refined corner, via the map connecting old parent corners and
                         // new refined ones.

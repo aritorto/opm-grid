@@ -1230,6 +1230,8 @@ namespace Dune
             }
         };
     // OPERATOR< to compare/sort Geometry<0,3> objects
+    // template<int codim> 
+    inline
     bool operator<(const Geometry<0,3>& g1, const Geometry<0,3>& g2) {
         return g1.center() < g2.center();
     }
