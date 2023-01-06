@@ -365,7 +365,7 @@ check_refined_grid(const cpgrid::Geometry<3, 3>& parent,
         }
         CHECK_COORDINATES(r.center(), center);
     }
-    
+
     // Check that the weighted mean of all centers equals the parent center
     GlobalCoordinate center = {0.0, 0.0, 0.0};
     for (auto r : refined) {
@@ -509,7 +509,7 @@ void refine_and_check(const cpgrid::Geometry<3, 3>& parent_geometry,
     /*  Dune::CpGrid coarse_grid;
     std::array<double, 3> cell_sizes_new = {1.0, 1.0, 1.0};
     std::array<int, 3> coarse_grid_dim = {4,3,3};
-    std::array<int, 3> cells_per_dim_patch = {2,2,2};   
+    std::array<int, 3> cells_per_dim_patch = {2,2,2};
     std::array<int, 3> start_ijk = {1,0,1};
     std::array<int, 3> end_ijk = {3,2,3};  // then patch_dim = {3-1,2-0,3-1} ={2,2,2}
     coarse_grid.createCartesian(coarse_grid_dim, cell_sizes_new);
@@ -601,9 +601,26 @@ BOOST_AUTO_TEST_CASE(refine_distorted_cube)
     Geometry g(center, v, pg, cor_idx);
     refine_and_check(g, {1, 1, 1});
     refine_and_check(g, {2, 3, 4});
-    
+
+}
+
+void refinePatch_and_check(const std::array<int,3>&,
+                           const std::array<int,3>&,
+                           const std::array<int,3>&)
+{
+    // Create a grid that is equivalent to the refinement
+    Dune::CpGrid coarse_grid;
+    std::array<double, 3> cell_sizes_new = {1.0, 1.0, 1.0};
+    std::array<int, 3> coarse_grid_dim = {4,3,3};
+    std::array<int, 3> cells_per_dim_patch = {2,2,2};
+    std::array<int, 3> start_ijk = {1,0,1};
+    std::array<int, 3> end_ijk = {3,2,3};  // then patch_dim = {3-1,2-0,3-1} ={2,2,2}
+    coarse_grid.createCartesian(coarse_grid_dim, cell_sizes_new);
+    // Call refinedBlockPatch()
+    coarse_grid.current_view_data_->refineBlockPatch(cells_per_dim_patch, start_ijk, end_ijk);
+
 }
 BOOST_AUTO_TEST_CASE(refine_patch)
 {
-    
+    refinePatch_and_check({}, {}, {});
 }

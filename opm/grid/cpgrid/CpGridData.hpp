@@ -122,6 +122,11 @@ void refinePatch_and_check(const std::array<int,3>&,
                            const std::array<int,3>&,
                            const std::array<int,3>&);
 
+void refinePatch_and_check(Dune::CpGrid&,
+                           const std::array<int,3>&,
+                           const std::array<int,3>&,
+                           const std::array<int,3>&);
+
 namespace Dune
 {
 namespace cpgrid
@@ -149,6 +154,12 @@ class CpGridData
     void::refinePatch_and_check(const std::array<int,3>&,
                         const std::array<int,3>&,
                         const std::array<int,3>&);
+
+    friend
+    void ::refinePatch_and_check(Dune::CpGrid&,
+                                 const std::array<int,3>&,
+                                 const std::array<int,3>&,
+                                 const std::array<int,3>&);
 
 private:
     CpGridData(const CpGridData& g);
