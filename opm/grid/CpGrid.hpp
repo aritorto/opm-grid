@@ -896,11 +896,12 @@ namespace Dune
 
             // All REFINED FACES, with repetition. We will make a set out of it to 'remove' repeated faces.
             std::vector<int> all_parent_faces_repetition;
+            std::vector<Dune::cpgrid::Geometry<2, 3>> all_refined_faces_repetition;
             // Map to relate a refined face with its parent cell, index in its 'level'.
             // The value will be {int parent cell index, int face index in its LRG}
-            std::map<int, std::array<int,2>> refinedFaceId_to_parentCellFaceId;
+            std::map<Dune::cpgrid::Geometry<2, 3>, std::array<int,2>> refinedFace_to_parentCellFaceId;
             // Reverse map {parent cell index, corner index} -> {x,y,z}
-            std::map<std::array<int,2>,int> parentCellFaceId_to_refinedFaceId;
+            std::map<std::array<int,2>,Dune::cpgrid::Geometry<2, 3>> parentCellFaceId_to_refinedFace;
             
             
             
@@ -948,11 +949,12 @@ namespace Dune
                 // Auxiliary int to count refined faces. 
                 int refined_face_count = 0;
                 for (auto& face :  (*level_ptr).geometry_.geomVector(std::integral_constant<int,1>())) {
+                    all_refined_faces_repetition.push_back(face);
                     // Create entries on the maps to relate refined faces with their actual global coordiantes.
                     // Notice that maps re-write a value when the key is the same, so we would not repeat them.
-                    refinedFaceId_to_parentCellFaceId[refined_face_count] = {cell, face.index()};
-                    parentCellFaceId_to_refinedFaceId[{cell, face.index()}] = refined_face_count;
-                    refined_face_coint +=1;
+                    refinedFace_to_parentCellFaceId[face] = {cell, refined_face_count};
+                    parentCellFaceId_to_refinedFace[{cell, refined_face_count}] = face;
+                    refined_face_count +=1;
                 }
             }
             // All refined corners WITHOUT repetition
@@ -977,11 +979,12 @@ namespace Dune
             }
 
              // All refined faces WITHOUT repetition
-            std::vector<int> all_different_refined_faces;
+            std::vector<Dune::cpgrid::Geometry<2, 3>> all_different_refined_faces;
             all_different_refined_faces.push_back(all_refined_faces_repetition[0]);
             for (auto& face : all_refined_faces_repetition) {
                 for (auto& one_diff_face : all_different_refined_faces) {
-                    if ( face != one_diff_face) {
+                    if ( (face.center() != one_diff_face.center()) ||
+                         (face.volume() != one_diff_face.volume())) {
                         all_different_refined_faces.push_back(face);
                     }   
                 }
@@ -1067,13 +1070,13 @@ namespace Dune
                     //false-> face does not belong to any cell that got refined.
                 }
                 if(!isThere_face) { // face was not involved in refinement.
-                    level_to_leaf_faces[{-1, face.index()}] = face_count;
+                    level_to_leaf_faces[{-1, face}] = face_count;
                     face_count +=1;
                 }
             }
             // Add refined faces to the leaf faces
             for (auto& face : all_different_refined_faces){ 
-                level_to_leaf_faces[refinedFaceId_to_parentCellFaceId[face]] = face_count;
+                level_to_leaf_faces[refinedFace_to_parentCellFaceId[face]] = face_count;
                 face_count +=1;
             }
             // Resize the container of the leaf corners.

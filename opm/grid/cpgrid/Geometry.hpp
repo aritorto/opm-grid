@@ -1229,12 +1229,17 @@ namespace Dune
                 }
             }
         };
-    // OPERATOR< to compare/sort Geometry<0,3> objects
-    // template<int codim> 
+    // OPERATOR< to compare/sort Geometry<0,3> object
     inline
     bool operator<(const Geometry<0,3>& g1, const Geometry<0,3>& g2) {
         return g1.center() < g2.center();
     }
+     // OPERATOR< to compare/sort Geometry<2,3> object
+    inline
+    bool operator<(const Geometry<2,3>& g1, const Geometry<2,3>& g2) {
+        return g1.center() < g2.center();
+    }
+    
     
     
     } // namespace cpgrid
