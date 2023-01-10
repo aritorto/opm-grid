@@ -1022,8 +1022,30 @@ namespace Dune
                 }
             }
 
-            // To store the leaf view.
+            // To store the LEVEL 1.
             typedef Dune::FieldVector<double,3> PointType;
+            std::shared_ptr<Dune::cpgrid::CpGridData> level1_ptr =
+                std::make_shared<Dune::cpgrid::CpGridData>((*data[0]).ccobj_);
+            auto& level1 = *level1_ptr;
+            Dune::cpgrid::DefaultGeometryPolicy& level1_geometries = level1.geometry_;
+            std::vector<std::array<int,8>>& level1_cell_to_point = level1.cell_to_point_;
+            cpgrid::OrientedEntityTable<0,1>& level1_cell_to_face = level1.cell_to_face_;
+            Opm::SparseTable<int>& level1_face_to_point = level1.face_to_point_;
+            cpgrid::OrientedEntityTable<1,0>& level1_face_to_cell = level1.face_to_cell_;
+            cpgrid::EntityVariable<enum face_tag,1>& level1_face_tags = level1.face_tag_;
+            cpgrid::SignedEntityVariable<Dune::FieldVector<double,3>,1>& level1_face_normals = level1.face_normals_;
+
+            Dune::cpgrid::EntityVariableBase<cpgrid::Geometry<0,3>>& level1_corners =
+                level1_geometries.geomVector(std::integral_constant<int,3>());
+            Dune::cpgrid::EntityVariableBase<cpgrid::Geometry<2,3>>& level1_faces =
+                level1_geometries.geomVector(std::integral_constant<int,1>());
+            Dune::cpgrid::EntityVariableBase<cpgrid::Geometry<3,3>>& level1_cells =
+                level1_geometries.geomVector(std::integral_constant<int,0>());
+            Dune::cpgrid::EntityVariableBase<enum face_tag>& l1_mutable_face_tags = level1_face_tags;
+            Dune::cpgrid::EntityVariableBase<PointType>& l1_mutable_face_normals = level1_face_normals;
+
+
+            // To store the leaf view.
             std::shared_ptr<Dune::cpgrid::CpGridData> leaf_view_ptr =
                 std::make_shared<Dune::cpgrid::CpGridData>((*data[0]).ccobj_);
             auto& leaf_view = *leaf_view_ptr;
@@ -1065,17 +1087,32 @@ namespace Dune
                     corner_count +=1;
                 }
             }
+            // For level 1
+            int l1_corner_count = 0;
+            std::map<std::array<int,2>, int> auxLevel_to_l1_corners;
             // Add refined corners to the leaf corners
             for (auto& corn : all_different_refined_corners){
                 level_to_leaf_corners[globalCoord_to_cornId[corn.center()]] = corner_count; //= {cell, refined_corn_count};
+                corner_count += 1;
+                auxLevel_to_l1_corners[globalCoord_to_cornId[corn.center()]] = l1_corner_count;
+                l1_corner_count +=1;  
             }
+            // LEAF VIEW
             // Resize the container of the leaf corners.
             leaf_corners.resize(corner_count);
             for (auto& [level_levelIdx, leaf_idx] : level_to_leaf_corners) {
                 leaf_corners[leaf_idx] =
                     (*aux_grids[cellIdx_to_fakeLevel[level_levelIdx[0]]]).
-                    geometry_.geomVector(std::integral_constant<int,3>()).get(level_levelIdx[1]);
+                    geometry_.geomVector(std::integral_constant<int,3>()).get(level_levelIdx[1]);  
             }
+            // LEVEL 1
+            level1_corners.resize(l1_corner_count);
+             for (auto& [level_levelIdx, l1_idx] : auxLevel_to_l1_corners) {
+                level1_corners[l1_idx] =
+                    (*aux_grids[cellIdx_to_fakeLevel[level_levelIdx[0]]]).
+                    geometry_.geomVector(std::integral_constant<int,3>()).get(level_levelIdx[1]);  
+            }
+
 
             // LEAF FACES
             // This map will generate a consecutive index-numbering, associating this leaf index with
@@ -1265,6 +1302,8 @@ namespace Dune
             }
             // LEAF FACE TO CELL
             leaf_cell_to_face.makeInverseRelation(leaf_face_to_cell);
+            //  Add level 1 (refinement of the set of chosen cells from level 0) to "data".
+            data.push_back(level1_ptr);
             //  Add level 2 (leafview) to "data".
             data.push_back(leaf_view_ptr);
         }
