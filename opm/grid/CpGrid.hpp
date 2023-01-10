@@ -572,7 +572,7 @@ namespace Dune
             // "level1_ptr" is a CpGridData object. New born corners, faces, cells, with
             //              their topological information, e.g., cell_to_face_.
             // Add level 1 to "data".
-            data.push_back(level1_ptr);    
+            data.push_back(level1_ptr);
             // To store the leaf view.
             typedef Dune::FieldVector<double,3> PointType;
             std::shared_ptr<Dune::cpgrid::CpGridData> leaf_view_ptr =
@@ -603,7 +603,7 @@ namespace Dune
             std::map<std::array<int,2>, int> level_to_leaf_corners;
             // Corners coming from the level 0, EXCLUDING patch_corners.
             for (int corner = 0; corner < data[0]->size(3); ++corner) {
-                // Auxiliary bool to discard patch corners. 
+                // Auxiliary bool to discard patch corners.
                 bool isThere_corn = false;
                 for(auto& patch_corn : patch_corners) {
                     isThere_corn = isThere_corn || (corner == patch_corn); //true->corn coincides with one patch_corners
@@ -1131,6 +1131,7 @@ namespace Dune
                 // Add the amount of points to the count num_points.
                 num_points += old_face_to_point.size();
                 if (level_levelIdx[0] == -1) { // If the face has not been refined (not a parent one).
+                    // FACE TO POINT
                     for (auto& corn : old_face_to_point){
                         // Auxiliary bool to identify boundary patch corners
                         bool isThere_bound_corn = false;
@@ -1149,6 +1150,7 @@ namespace Dune
                     }
                 }
                 else { // If the face was a parent one
+                    // FACE TO POINT
                     for (auto& corn : old_face_to_point){
                         aux_face_to_point[leaf_idx].push_back(level_to_leaf_corners[{level_levelIdx[0],corn}]);
                     }
@@ -1219,38 +1221,52 @@ namespace Dune
                             leaf_cell_to_point[leaf_idx][corn] = level_to_leaf_corners[old_to_new_corners[old_cell_to_point[corn]]];
                         }
                     }
-                     // CELL TO FACE
-                for (auto& face : old_cell_to_face) {
-                    // Auxiliary bool to identity if the face got refined.
-                    bool isThere_face = false;
-                    // Check if the face is one of those faces that was involved in the refinement.
-                    // If it was, replace it with its children faces.
-                    for(auto& bound_face : all_different_parent_faces) {
-                        isThere_face = isThere_face || (face.index() == bound_face); //true-> coincides with one got-refined-face
-                    }
-                    // If it got refined, replace it with its children:
-                    if(isThere_face) {
-                        for (auto& child : std::get<1>(old_to_new_faces[face.index()])) {
-                            aux_cell_to_face[leaf_idx].
-                                push_back({level_to_leaf_faces[{std::get<0>(old_to_new_faces[face.index()]), child}], // (new) refined face
+                    // CELL TO FACE
+                    for (auto& face : old_cell_to_face) {
+                        // Auxiliary bool to identity if the face got refined.
+                        bool isThere_face = false;
+                        // Check if the face is one of those faces that was involved in the refinement.
+                        // If it was, replace it with its children faces.
+                        for(auto& bound_face : all_different_parent_faces) {
+                            isThere_face = isThere_face || (face.index() == bound_face); //true-> coincides with one got-refined-face
+                        }
+                        // If it got refined, replace it with its children:
+                        if(isThere_face) {
+                            for (auto& child : std::get<1>(old_to_new_faces[face.index()])) {
+                                aux_cell_to_face[leaf_idx].
+                                    push_back({level_to_leaf_faces[{std::get<0>(old_to_new_faces[face.index()]), child}], 
+                                            face.orientation()}); 
+                            }
+                        }
+                        // Otherwise, keep the face but with its new leaf index.
+                        else {
+                            aux_cell_to_face[leaf_idx].push_back({level_to_leaf_faces[{-1, face.index()}], // (new) refined face
                                     face.orientation()}); // orientation
                         }
                     }
-                    // Otherwise, keep the face but with its new leaf index.
-                    else {
-                        aux_cell_to_face[leaf_idx].push_back({level_to_leaf_faces[{-1, face.index()}], // (new) refined face
-                                face.orientation()}); // orientation
-                    }
-                }
                 }
                 else { // If the cell is a new born one
                     // CELL TO POINT
                     for (int corn = 0; corn < 8; ++corn){
                         leaf_cell_to_point[leaf_idx][corn] = level_to_leaf_corners[{level_levelIdx[0], old_cell_to_point[corn]}];
                     }
+                    // CELL TO FACE
+                    for (auto& face : old_cell_to_face) {
+                        // Get the leaf index and orientation of faces of the cell.
+                        aux_cell_to_face[leaf_idx].push_back({level_to_leaf_faces[{level_levelIdx[0], face.index()}], // neigh cell
+                                face.orientation()}); // orientation
+                    }
                 }
-               
+
             }
+            // LEAF CELL TO FACE
+            for (int cell = 0; cell < cell_count; ++cell) {
+                leaf_cell_to_face.appendRow(aux_cell_to_face[cell].begin(), aux_cell_to_face[cell].end());
+            }
+            // LEAF FACE TO CELL
+            leaf_cell_to_face.makeInverseRelation(leaf_face_to_cell);
+            //  Add level 2 (leafview) to "data".
+            data.push_back(leaf_view_ptr);
         }
         //////////////////////////////////////
 
