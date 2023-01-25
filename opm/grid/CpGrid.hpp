@@ -837,14 +837,14 @@ namespace Dune
 
         //////////////////////////////////////
         // --------------- GET LEAF VIEW FROM 2 LEVELS----- SET OF CELLS------
-        // Assume we have Level 0 (a CpGridData object) stored in the entry 0
-        // of a vector "data" of shared pointers of CpGridData objects.
+        // Assume we have Level 0 (a CpGridData object obtained via entry 0 of "data_"). 
         // We choose some cells from level 0 (not necessary a block of cells), and refine them.
-        // Create the leaf view
-        // built with the entities from level 0 that weren't involded in the
+        // Create the leaf view built with the entities from level 0 that weren't involded in the
         // refinenment together with the new born entities created in level 1.
+        // Level 1 stored in data_ entry 1.
+        // LeafView stored in data_ entry 2.
         //
-        // @param cells_per_dim   Amount of new born cells per dimension ({in x-direction, y-direction, z-direction})
+        // @param cells_per_dim   Amount of new born cells per direction ({in x-direction, y-direction, z-direction})
         // @param cells2refine    Indices of the chosen cells from level 0 to be refined.
         void getLeafView2LevelsSet(const std::array<int,3>& cells_per_dim,
                                    std::vector<int> cells2refine)
@@ -858,7 +858,7 @@ namespace Dune
             // Container to collect auxiliary CpGridData objects for each parent cell.
             // All CpGridData objects, one per parent cell. First entry is LEVEL 0.
             std::vector<std::shared_ptr<Dune::cpgrid::CpGridData>> aux_grids;
-            aux_grids.reserve(num_cells2refine +1);
+            aux_grids.reserve(num_cells2refine +1); // +1 because we add level 0 
             aux_grids.push_back(data[0]);
             // All parent_to_refined_corners (the corners of a parent cell get "replaced by" the new born (coinciding) ones.)
             std::vector<std::vector<std::array<int,2>>> all_parent_to_refined_corners;
@@ -917,7 +917,6 @@ namespace Dune
             cellIdx_to_fakeLevel[-1] = 0;
 
             // Build one LRG for each cell that get refined. We'll store only one final CpGridData object as a new entry in "data".
-            //for (auto& cell : cells2refine) {
             for (int cell = 0; cell < num_cells2refine; ++cell) {
                 cellIdx_to_fakeLevel[cells2refine[cell]] = cell +1;
                 // Build level from the selected cell from level 0 (level 0 = data[0]).
@@ -930,7 +929,7 @@ namespace Dune
                     old_to_new_corners[old_new[0]] = {cells2refine[cell], old_new[1]};
                 }
                 // Old to new face. Recall type parent_children_faces -> std::vector<std::tuple<int,std::vector<int>>
-                for (auto& old_new : parent_to_children_faces) { // old_new -> std::tuple<int,std::vector<int>
+                for (auto& old_new : parent_to_children_faces) { // old_new -> std::tuple<int,std::vector<int>>
                     old_to_new_faces[std::get<0>(old_new)] = std::make_tuple(cells2refine[cell], std::get<1>(old_new));
                 }
 
@@ -1028,12 +1027,12 @@ namespace Dune
                 std::make_shared<Dune::cpgrid::CpGridData>((*data[0]).ccobj_);
             auto& level1 = *level1_ptr;
             Dune::cpgrid::DefaultGeometryPolicy& level1_geometries = level1.geometry_;
-            std::vector<std::array<int,8>>& level1_cell_to_point = level1.cell_to_point_;
-            cpgrid::OrientedEntityTable<0,1>& level1_cell_to_face = level1.cell_to_face_;
-            Opm::SparseTable<int>& level1_face_to_point = level1.face_to_point_;
-            cpgrid::OrientedEntityTable<1,0>& level1_face_to_cell = level1.face_to_cell_;
-            cpgrid::EntityVariable<enum face_tag,1>& level1_face_tags = level1.face_tag_;
-            cpgrid::SignedEntityVariable<Dune::FieldVector<double,3>,1>& level1_face_normals = level1.face_normals_;
+            std::vector<std::array<int,8>>& l1_cell_to_point = level1.cell_to_point_;
+            cpgrid::OrientedEntityTable<0,1>& l1_cell_to_face = level1.cell_to_face_;
+            Opm::SparseTable<int>& l1_face_to_point = level1.face_to_point_;
+            cpgrid::OrientedEntityTable<1,0>& l1_face_to_cell = level1.face_to_cell_;
+            cpgrid::EntityVariable<enum face_tag,1>& l1_face_tags = level1.face_tag_;
+            cpgrid::SignedEntityVariable<Dune::FieldVector<double,3>,1>& l1_face_normals = level1.face_normals_;
 
             Dune::cpgrid::EntityVariableBase<cpgrid::Geometry<0,3>>& level1_corners =
                 level1_geometries.geomVector(std::integral_constant<int,3>());
@@ -1041,8 +1040,8 @@ namespace Dune
                 level1_geometries.geomVector(std::integral_constant<int,1>());
             Dune::cpgrid::EntityVariableBase<cpgrid::Geometry<3,3>>& level1_cells =
                 level1_geometries.geomVector(std::integral_constant<int,0>());
-            Dune::cpgrid::EntityVariableBase<enum face_tag>& l1_mutable_face_tags = level1_face_tags;
-            Dune::cpgrid::EntityVariableBase<PointType>& l1_mutable_face_normals = level1_face_normals;
+            Dune::cpgrid::EntityVariableBase<enum face_tag>& l1_mutable_face_tags = l1_face_tags;
+            Dune::cpgrid::EntityVariableBase<PointType>& l1_mutable_face_normals = l1_face_normals;
 
 
             // To store the leaf view.
@@ -1087,25 +1086,29 @@ namespace Dune
                     corner_count +=1;
                 }
             }
-            // For level 1
-            int l1_corner_count = 0;
-            std::map<std::array<int,2>, int> auxLevel_to_l1_corners;
-            // Add refined corners to the leaf corners
+            // 
+            int l1_corner_count = 0; // only for level 1
+            std::map<std::array<int,2>, int> auxLevel_to_l1_corners; // only for level 1
+            // Add refined corners to the leaf corners and the level 1 corners.
             for (auto& corn : all_different_refined_corners){
-                level_to_leaf_corners[globalCoord_to_cornId[corn.center()]] = corner_count; //= {cell, refined_corn_count};
+                // globalCoord_to_cornId[corn.center()] = {cells2refine[cell], refined_corn_count}
+                // LEAF corners
+                level_to_leaf_corners[globalCoord_to_cornId[corn.center()]] = corner_count; 
                 corner_count += 1;
+                // LEVEL 1 corners
                 auxLevel_to_l1_corners[globalCoord_to_cornId[corn.center()]] = l1_corner_count;
                 l1_corner_count +=1;  
             }
-            // LEAF VIEW
-            // Resize the container of the leaf corners.
+            // LEAF VIEW CORNERS
+            // Resize the container of the leaf view corners.
             leaf_corners.resize(corner_count);
             for (auto& [level_levelIdx, leaf_idx] : level_to_leaf_corners) {
                 leaf_corners[leaf_idx] =
                     (*aux_grids[cellIdx_to_fakeLevel[level_levelIdx[0]]]).
                     geometry_.geomVector(std::integral_constant<int,3>()).get(level_levelIdx[1]);  
             }
-            // LEVEL 1
+            // LEVEL 1 CORNERS 
+            // Resize the container of level 1 corners.
             level1_corners.resize(l1_corner_count);
              for (auto& [level_levelIdx, l1_idx] : auxLevel_to_l1_corners) {
                 level1_corners[l1_idx] =
@@ -1114,13 +1117,15 @@ namespace Dune
             }
 
 
-            // LEAF FACES
+            // LEAF VIEW FACES
             // This map will generate a consecutive index-numbering, associating this leaf index with
             // the corresponding 'level' (-1 for non-refined faces, parent cell index for refined ones).
             int face_count = 0;
             std::map<std::array<int,2>, int> level_to_leaf_faces;
             // Faces coming from the level 0, EXCLUDING parents_faces.
             // Check all the corners from level 0.
+            int l1_face_count = 0; // only for level 1
+            std::map<std::array<int,2>, int> auxLevel_to_l1_faces; // only for level 1
             // Auxiliary integer to count all the points in leaf_face_to_point.
             int num_points = 0;
             // Create the leaf faces, their tags, normals, and 4 corners.
@@ -1142,12 +1147,14 @@ namespace Dune
                     face_count +=1;
                 }
             }
-            // Add refined faces to the leaf faces
+            // Add refined faces to the leaf view faces
             for (auto& face : all_different_refined_faces){
                 level_to_leaf_faces[refinedFace_to_parentCellFaceId[face]] = face_count;
-                face_count +=1;
+                face_count += 1;
+                auxLevel_to_l1_faces[refinedFace_to_parentCellFaceId[face]] = l1_face_count;
+                l1_face_count += 1;
             }
-            // Resize the container of the leaf corners.
+            // Resize the containers of the leaf faces, face tags, and normals.
             leaf_faces.resize(face_count);
             mutable_face_tags.resize(face_count);
             mutable_face_normals.resize(face_count);
@@ -1199,9 +1206,44 @@ namespace Dune
                 leaf_face_to_point.appendRow(aux_face_to_point[face].begin(), aux_face_to_point[face].end());
             }
 
+            // Resize the containers of the level 1 faces, face tags, and normals.
+            level1_faces.resize(l1_face_count);
+            l1_mutable_face_tags.resize(l1_face_count);
+            l1_mutable_face_normals.resize(l1_face_count);
+            int l1_num_points = 0;
+            std::vector<std::vector<int>> l1_aux_face_to_point; 
+            for (auto& [level_levelIdx, l1_idx] : auxLevel_to_l1_faces) {
+                // Get face geometry
+                level1_faces[l1_idx] =
+                    (*aux_grids[cellIdx_to_fakeLevel[level_levelIdx[0]]]).geometry_.geomVector(std::integral_constant<int,1>())
+                    [Dune::cpgrid::EntityRep<1>(level_levelIdx[1], true)];
+                // Get the face tag.
+                mutable_face_tags[l1_idx] = (*aux_grids[cellIdx_to_fakeLevel[level_levelIdx[0]]]).face_tag_
+                    [Dune::cpgrid::EntityRep<1>(level_levelIdx[1], true)];
+                // Get the face normal.
+                mutable_face_normals[l1_idx] = (*aux_grids[cellIdx_to_fakeLevel[level_levelIdx[0]]]).face_normals_
+                    [Dune::cpgrid::EntityRep<1>(level_levelIdx[1], true)];
+                // Get corners of the face, in the "level" the face was born.
+                auto old_face_to_point = (*aux_grids[cellIdx_to_fakeLevel[level_levelIdx[0]]]).face_to_point_[level_levelIdx[1]];
+                l1_aux_face_to_point[l1_idx].reserve(old_face_to_point.size());
+                // Add the amount of points to the count num_points.
+                l1_num_points += old_face_to_point.size();
+                // FACE TO POINT
+                for (auto& corn : old_face_to_point){
+                    l1_aux_face_to_point[l1_idx].push_back(auxLevel_to_l1_corners[{level_levelIdx[0],corn}]);
+                }
+            }
+            // LEVEL 1 FACE_TO_POINT
+            l1_face_to_point.reserve(l1_face_count, l1_num_points);
+            for (int face = 0; face < l1_face_count; ++face) {
+                l1_face_to_point.appendRow(l1_aux_face_to_point[face].begin(), l1_aux_face_to_point[face].end());
+            }
+
             // LEAF  CELLS
             int cell_count = 0;
+            int l1_cell_count = 0; // only for level 1
             std::map<std::array<int,2>, int> level_to_leaf_cells;
+            std::map<std::array<int,2>, int> auxLevel_to_l1_cells; // only for level 1
             // Cells coming from the level 0, that are not the patch cells (that got refined).
             for (int cell = 0; cell < data[0]-> size(0); ++cell) {
                 // Auxiliary bool to identify cells of the patch.
@@ -1218,11 +1260,13 @@ namespace Dune
                     for (auto& children_one_parent : all_parent_to_children_cells) {
                         // children_one_parent type std::tuple<int, std::vector<int>>
                         for (auto& child : std::get<1>(children_one_parent)) {
+                            // for the leaf view
                             level_to_leaf_cells[{std::get<0>(children_one_parent), child}] = cell_count;
+                            // for level 1
+                            auxLevel_to_l1_cells[{std::get<0>(children_one_parent), child}] = l1_cell_count;
                         }
                     }
                 }
-
             }
             leaf_cells.resize(cell_count);
             leaf_cell_to_point.resize(cell_count);
@@ -1302,6 +1346,40 @@ namespace Dune
             }
             // LEAF FACE TO CELL
             leaf_cell_to_face.makeInverseRelation(leaf_face_to_cell);
+
+            
+            // LEVEL 1 CELLS
+            level1_cells.resize(l1_cell_count);
+            l1_cell_to_point.resize(l1_cell_count);
+            std::map<int,std::vector<cpgrid::EntityRep<1>>> l1_aux_cell_to_face;
+            for (auto& [level_levelIdx, l1_idx] : auxLevel_to_l1_cells) {
+                // Get the cell geometry.
+                level1_cells[l1_idx] = (*aux_grids[cellIdx_to_fakeLevel[level_levelIdx[0]]]).
+                    geometry_.geomVector(std::integral_constant<int,0>())
+                    [Dune::cpgrid::EntityRep<0>(level_levelIdx[1], true)];
+                // Get old faces of the cell that will be replaced with level1 faces
+                auto old_cell_to_face = (*aux_grids[cellIdx_to_fakeLevel[level_levelIdx[0]]]).cell_to_face_
+                    [Dune::cpgrid::EntityRep<0>(level_levelIdx[1], true)];
+                auto old_cell_to_point = (*aux_grids[cellIdx_to_fakeLevel[level_levelIdx[0]]]).cell_to_point_[level_levelIdx[1]];
+                // CELL TO POINT
+                for (int corn = 0; corn < 8; ++corn){
+                        l1_cell_to_point[l1_idx][corn] = auxLevel_to_l1_corners[{level_levelIdx[0], old_cell_to_point[corn]}];
+                }
+                // CELL TO FACE
+                for (auto& face : old_cell_to_face) {
+                    // Get the level1 index and orientation of faces of the cell.
+                    l1_aux_cell_to_face[l1_idx].push_back({auxLevel_to_l1_faces[{level_levelIdx[0], face.index()}], // neigh cell
+                                face.orientation()}); // orientation
+                }
+            }
+        
+            // LEVEL 1 CELL TO FACE
+            for (int cell = 0; cell < l1_cell_count; ++cell) {
+                l1_cell_to_face.appendRow(l1_aux_cell_to_face[cell].begin(), aux_cell_to_face[cell].end());
+            }
+            // LEEVEL 1 FACE TO CELL
+            l1_cell_to_face.makeInverseRelation(l1_face_to_cell);
+
             //  Add level 1 (refinement of the set of chosen cells from level 0) to "data".
             data.push_back(level1_ptr);
             //  Add level 2 (leafview) to "data".
