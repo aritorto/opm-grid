@@ -42,10 +42,10 @@
 #include <map>
 #include <array>
 #include <unordered_set>
-#include <opm/common/ErrorMacros.hpp>
+//#include <opm/common/ErrorMacros.hpp>
 
 // Warning suppression for Dune includes.
-#include <opm/grid/utility/platform_dependent/disable_warnings.h>
+//#include <opm/grid/utility/platform_dependent/disable_warnings.h>
 
 #include <dune/common/version.hh>
 
@@ -62,13 +62,13 @@
 #include <dune/grid/common/gridenums.hh>
 #include "cpgrid/CpGridData.hpp"
 #include <opm/grid/utility/platform_dependent/reenable_warnings.h>
-#include "cpgrid/Intersection.hpp"
+//#include "cpgrid/Intersection.hpp"
 #include "cpgrid/Geometry.hpp"
 #include "cpgrid/Indexsets.hpp"
 #include "cpgrid/DefaultGeometryPolicy.hpp"
 #include "common/GridEnums.hpp"
 #include "common/Volumes.hpp"
-#include <opm/grid/cpgpreprocess/preprocess.h>
+//#include <opm/grid/cpgpreprocess/preprocess.h>
 #include <opm/grid/utility/OpmWellType.hpp>
 
 #include <iostream>
@@ -1682,7 +1682,7 @@ namespace Dune
 
 
 #include <opm/grid/cpgrid/Entity.hpp>
-#include <opm/grid/cpgrid/Iterators.hpp>
+//#include <opm/grid/cpgrid/Iterators.hpp>
 /*#include <opm/grid/cpgrid/PersistentContainer.hpp>
 #include <opm/grid/cpgrid/CartesianIndexMapper.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
@@ -1740,5 +1740,5 @@ namespace Dune
 } // namespace Dune
 
 #include <opm/grid/cpgrid/PersistentContainer.hpp>
-#include <opm/grid/cpgrid/CartesianIndexMapper.hpp>
+//#include <opm/grid/cpgrid/CartesianIndexMapper.hpp>
 #endif // OPM_CPGRID_HEADER
