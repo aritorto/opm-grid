@@ -36,10 +36,10 @@ along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef OPM_ITERATORS_HEADER
 #define OPM_ITERATORS_HEADER
 
-#include <dune/grid/common/gridenums.hh>
+//#include <dune/grid/common/gridenums.hh>
 #include "PartitionIteratorRule.hpp"
-#include <opm/common/ErrorMacros.hpp>
-#include "CpGridData.hpp"
+//#include <opm/common/ErrorMacros.hpp>
+//#include "CpGridData.hpp"
 
 
 #include <stack>
@@ -134,18 +134,14 @@ namespace Dune
             {
                 resetEntity_();
             }
+            
+            /// Equality, when both are invalid, or when they have the same target (and same grid?).
+            bool operator==(const HierarchicIterator& other) const
+            {
+                return ((virtualEntity_ == other.virtualEntity_) && (pgrid_ == other.pgrid_))
+                    || ((!this->isValid()) && (!other->isValid()));
+            }
 
-
-             
-
-            // COMPARISON ON TARGET ENTITY. hierarchiIt == other is target is the same, or both are invalid
-            /// Equality.
-            //  bool operator==(const HierarchicIterator& other) const
-            //  {
-            //      return (pgrid_ == other.pgrid_) || (/* bath invalid entitties*/);
-            // }
-            // Check wheter  one of them if invalid, the other has to be also invalid.
-            // If both are valid, check that they are equal.
 
             /// @brief
             /// @todo Doc me!
@@ -226,7 +222,7 @@ namespace std
 
 
 #include <opm/grid/cpgrid/CpGridData.hpp>
-#include "Entity.hpp"
+//#include "Entity.hpp"
 
 namespace Dune {
 namespace cpgrid {

@@ -41,7 +41,7 @@
 #include <dune/grid/common/gridenums.hh>
 
 #include "PartitionTypeIndicator.hpp"
-//#include "EntityRep.hpp"
+
 
 namespace Dune
 {
@@ -263,9 +263,9 @@ the reference element of its father.
 
 // now we include the Iterators.hh We need to do this here because for hbegin/hend the compiler
 // needs to know the size of hierarchicIterator
-#include "Iterators.hpp"
-//#include "Entity.hpp"
+
 #include "Intersection.hpp"
+#include "Iterators.hpp"
 namespace Dune
 {
   namespace cpgrid
@@ -427,8 +427,7 @@ Entity<0> Entity<codim>::father() const
     if (!(this->hasFather())){
         OPM_THROW(std::logic_error, "Entity has no father.");
     }
-    const int& coarse_level = pgrid_ -> child_to_parent_cells_[this->index()][0];
-    const int& parent_index = pgrid_ -> child_to_parent_cells_[this->index()][1];
+    const auto& [coarse_level, parent_index] = pgrid_ -> child_to_parent_cells_[this->index()];
     const auto& coarse_grid =  pgrid_ -> grid_-> data_[coarse_level];
     return Entity<0>( *coarse_grid, parent_index, true); 
 }
@@ -440,13 +439,6 @@ Dune::cpgrid::Geometry<3,3> Dune::cpgrid::Entity<codim>::geometryInFather()
         OPM_THROW(std::logic_error, "Entity has no father.");
     }
     else{
-        /* const auto& entity_corners = pgrid_ -> cell_to_point_[this->index()];
-        std::vector<LocalCoordinate> local_corners;
-        local_corners.reserve(8);
-        for (const auto& corner : entity_corners){
-            local_corners.push_back(Dune::cpgrid::Geometry<3,3>::local(corner));
-            }
-*/
          //
         DefaultGeometryPolicy local_geometry;
         std::array<int,8> localEntity_to_point;
@@ -457,7 +449,7 @@ Dune::cpgrid::Geometry<3,3> Dune::cpgrid::Entity<codim>::geometryInFather()
         std::array<int,3> eIJK;
         pgrid_ -> getIJK(this->index(), eIJK);
         // Get dimension of the grid.
-        const auto& grid_dim = pgrid_ -> logicalCartesianSize(); // {cells_per_dim[0]*patch_dim[0] ...[1], ...[2]}
+        const auto& grid_dim = pgrid_ -> logicalCartesianSize(); // {cells_per_dim[0]*patch_dim[0], ...[1], ...[2]}
         // Get the local coordinates of the entity (in the reference unit cube).
         local_corners = {
             // corner '0'
