@@ -396,28 +396,43 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
         
 
         std::vector<int> leaf_to_parent_cell; // To store parent cell index, when leaf cell has a parent. Empty entry otherwise.
-        leaf_to_parent_cell.reserve(data[startIJK_vec.size()+1]-> size(0)); // Correct size.
+        leaf_to_parent_cell.resize(data[startIJK_vec.size()+1]-> size(0)); // Correct size.
         //
         const auto& leaf_view = coarse_grid.leafGridView();
         Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LeafGridView> elemMapper(leaf_view, Dune::mcmgElementLayout());
+        const auto& idSet = (*data[startIJK_vec.size()+1]).local_id_set_;
         // Allocate a vector for the concentration
-        std::vector<int> leaf_to_parent_cell_mcmgtMapper(elemMapper.size());
+        std::vector<int> leaf_to_parent_cell_mcmgtMapper;
+        leaf_to_parent_cell_mcmgtMapper.resize(data[startIJK_vec.size()+1]-> size(0));
+        //leaf_to_parent_cell_mcmgtMapper.reserve(elemMapper.size());
         //
         for (const auto& element: elements(leaf_view)){
             BOOST_CHECK( ((element.level() >= 0) || (element.level() < static_cast<int>(startIJK_vec.size()) +1)));
             if (element.hasFather()) { // leaf_cell has a father!
                 leaf_to_parent_cell[element.index()] = element.father().index();
 
+               
+                leaf_to_parent_cell_mcmgtMapper[element.index()] = element.father().index();
+                const auto& id = (*idSet).id(element);
                 auto index = elemMapper.index(element);
-                // leaf_to_parent_cell_mcmgtMapper
+                
+                
                     
-                std::cout << "Leaf cell: " <<  element.index() << '\n';
+                std::cout << "Leaf cell: " <<  element.index() << " element.index() " <<  element.index() << '\n';
+                std::cout << "Father index: " << element.father().index() <<  " is equal to : "
+                          << leaf_to_parent_cell[element.index()] << " and " << leaf_to_parent_cell_mcmgtMapper[element.index()] << '\n';
                 std::cout << "Level cell index: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][1]
                           << " in level: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][0] << '\n';
 
                 std::cout << '\n';
-                std::cout << "Mapper approach: " << index << '\n';
-                
+                std::cout << "Mapper approach. Index: " << index << '\n';
+                std::cout << "Mapper approach. id: " << id << '\n';
+                std::cout << "Mapper size: " << elemMapper.size() << '\n';
+                std::cout << '\n';
+
+                std::cout << "leaf_to_parent_cell size: " << leaf_to_parent_cell.size() << '\n';
+                std::cout << "leaf_to_parent_cell_mcmgtMapper size: " << leaf_to_parent_cell_mcmgtMapper.size() << '\n';
+                std::cout << '\n';
             }   
         }
     }
