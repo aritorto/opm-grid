@@ -391,18 +391,20 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
             }
         }
 
+        
+
         std::vector<int> leaf_to_parent_cell;
         leaf_to_parent_cell.reserve(data[startIJK_vec.size()+1]-> size(0));
         // int -> Entity<0>? When leaf cell has no father, empty entry.
         const auto& leaf_view = coarse_grid.leafGridView();
         for (const auto& element: elements(leaf_view)){
             BOOST_CHECK( ((element.level() >= 0) || (element.level() < static_cast<int>(startIJK_vec.size()) +1)));
-            // Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView> mapper(leaf_view); //, mcmgElementLayout());
-            // Allocate a vector for the concentration
-            // std::vector<double> c(mapper.size());
-            if (element.level()>0) { // leaf_cell has a father!
+            if (element.hasFather()) { // leaf_cell has a father!
                 leaf_to_parent_cell[element.index()] // element index() WHAT DOES IT DO ACTUALLY? we want the leaf_cell_index
                     = element.father().index(); // element.father() in type is Entity<0> instead of int
+                std::cout << "Leaf cell: " <<  element.index() << '\n';
+                std::cout << "Level cell index: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][1]
+                          << " in level: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][0] << '\n';
             }   
         }
     }
@@ -435,6 +437,7 @@ BOOST_AUTO_TEST_CASE(refine_patch_one_cell)
     refinePatch_and_check(coarse_grid, {cells_per_dim_patch}, {start_ijk}, {end_ijk});
     // Choose a cell touching the boundary of the patch and check amount of faces
 }
+
 
 BOOST_AUTO_TEST_CASE(lgrs_disjointPatches)
 {
@@ -543,10 +546,10 @@ void check_global_refine(const Dune::CpGrid& refined_grid, const Dune::CpGrid& e
     for(const auto& point: refined_leaf.geomVector<3>())
     {
         CHECK_COORDINATES(point.center(), equiv_point_iter->center());
-        std::cout <<"point "<<i++<<": ";
+        /* std::cout <<"point "<<i++<<": ";
         for(const auto& coord: point.center())
             std::cout << coord<< " ";
-        std::cout <<std::endl;
+            std::cout <<std::endl;*/
         for(const auto& coord: point.center())
             BOOST_TEST(std::isfinite(coord));
         ++equiv_point_iter;
@@ -556,10 +559,10 @@ void check_global_refine(const Dune::CpGrid& refined_grid, const Dune::CpGrid& e
     for(const auto& cell: refined_leaf.geomVector<3>())
     {
         CHECK_COORDINATES(cell.center(), equiv_cell_iter->center());
-        std::cout <<"cell "<<j++<<": ";
+        /* std::cout <<"cell "<<j++<<": ";
         for(const auto& coord: cell.center())
             std::cout << coord<< " ";
-        std::cout <<std::endl;
+            std::cout <<std::endl;*/
         for(const auto& coord: cell.center())
             BOOST_TEST(std::isfinite(coord));
         BOOST_CHECK_CLOSE(cell.volume(), equiv_cell_iter->volume(), 1e-6);
