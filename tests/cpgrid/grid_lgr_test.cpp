@@ -380,11 +380,6 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
             }
         } // end-level-for-loop
 
-        /*for (int lgr = 0; lgr < static_cast<int>(cells_per_dim_vec.size()); ++lgr)
-          {
-          BOOST_CHECK_CLOSE(refElemPatch_volume[lgr],  data[lgr+1]-> size(0) , 1e-6);
-          }*/
-
         BOOST_CHECK( static_cast<int>(startIJK_vec.size()) == coarse_grid.maxLevel());
         BOOST_CHECK( (*data[data.size()-1]).parent_to_children_cells_.empty());
 
@@ -396,9 +391,19 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
             }
         }
 
+        std::vector<int> leaf_to_parent_cell;
+        leaf_to_parent_cell.reserve(data[startIJK_vec.size()+1]-> size(0));
+        // int -> Entity<0>? When leaf cell has no father, empty entry.
         const auto& leaf_view = coarse_grid.leafGridView();
         for (const auto& element: elements(leaf_view)){
             BOOST_CHECK( ((element.level() >= 0) || (element.level() < static_cast<int>(startIJK_vec.size()) +1)));
+            // Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView> mapper(leaf_view); //, mcmgElementLayout());
+            // Allocate a vector for the concentration
+            // std::vector<double> c(mapper.size());
+            if (element.level()>0) { // leaf_cell has a father!
+                leaf_to_parent_cell[element.index()] // element index() WHAT DOES IT DO ACTUALLY? we want the leaf_cell_index
+                    = element.father().index(); // element.father() in type is Entity<0> instead of int
+            }   
         }
     }
 }
