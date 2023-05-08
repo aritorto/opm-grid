@@ -1438,6 +1438,8 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
         std::vector<int> l_global_cell(data_[patch+1]->size(0), 0); // instantiate a vector with 0s: {0,0,0,0,...}
         std::iota(l_global_cell.begin()+1, l_global_cell.end(), 1); // from entry[1], adds +1 per entry: {0,1,2,3,...}
         (*data_[patch+1]).global_cell_ = l_global_cell;
+        //          local_id_set_
+        (*data_[patch+1]).local_id_set_ = std::make_shared<const cpgrid::IdSet>(*data_[patch+1]);
         //          cells_per_dim_ Determine the amount of cells per direction, per parent cell, of the corresponding LGR. 
         (*data_[patch +1]).cells_per_dim_ = cells_per_dim_vec[patch];
         //          logical_cartesian_size_ Assuming Cartesian Grid Shape (GLOBAL grid is required to be Cartesian)

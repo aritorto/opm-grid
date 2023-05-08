@@ -404,7 +404,6 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
         // Allocate a vector for the concentration
         std::vector<int> leaf_to_parent_cell_mcmgtMapper;
         leaf_to_parent_cell_mcmgtMapper.resize(data[startIJK_vec.size()+1]-> size(0));
-        //leaf_to_parent_cell_mcmgtMapper.reserve(elemMapper.size());
         //
         for (const auto& element: elements(leaf_view)){
             BOOST_CHECK( ((element.level() >= 0) || (element.level() < static_cast<int>(startIJK_vec.size()) +1)));
