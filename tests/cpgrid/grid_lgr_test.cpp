@@ -47,6 +47,8 @@
 #include <opm/grid/cpgrid/EntityRep.hpp>
 #include <opm/grid/cpgrid/Geometry.hpp>
 
+#include <dune/grid/common/mcmgmapper.hh>
+
 
 #include <sstream>
 #include <iostream>
@@ -393,15 +395,19 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
 
         
 
-        std::vector<int> leaf_to_parent_cell;
-        leaf_to_parent_cell.reserve(data[startIJK_vec.size()+1]-> size(0));
-        // int -> Entity<0>? When leaf cell has no father, empty entry.
+        std::vector<int> leaf_to_parent_cell; // To store parent cell index, when leaf cell has a parent. Empty entry otherwise.
+        leaf_to_parent_cell.reserve(data[startIJK_vec.size()+1]-> size(0)); // Correct size.
+        //
         const auto& leaf_view = coarse_grid.leafGridView();
+        const auto& layout = Dune::mcmgElementLayout();
+        Dune::MultipleCodimMultipleGeomTypeMapper mapper(leaf_view, layout);
+        // Allocate a vector for the concentration
+        std::vector<double> c(mapper.size());
+        //
         for (const auto& element: elements(leaf_view)){
             BOOST_CHECK( ((element.level() >= 0) || (element.level() < static_cast<int>(startIJK_vec.size()) +1)));
             if (element.hasFather()) { // leaf_cell has a father!
-                leaf_to_parent_cell[element.index()] // element index() WHAT DOES IT DO ACTUALLY? we want the leaf_cell_index
-                    = element.father().index(); // element.father() in type is Entity<0> instead of int
+                leaf_to_parent_cell[element.index()] = element.father().index();
                 std::cout << "Leaf cell: " <<  element.index() << '\n';
                 std::cout << "Level cell index: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][1]
                           << " in level: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][0] << '\n';
@@ -435,7 +441,6 @@ BOOST_AUTO_TEST_CASE(refine_patch_one_cell)
     std::array<int, 3> end_ijk = {2,1,2};  // patch_dim = {2-1, 1-0, 2-1} ={1,1,1} -> Single Cell!
     coarse_grid.createCartesian(grid_dim, cell_sizes);
     refinePatch_and_check(coarse_grid, {cells_per_dim_patch}, {start_ijk}, {end_ijk});
-    // Choose a cell touching the boundary of the patch and check amount of faces
 }
 
 
