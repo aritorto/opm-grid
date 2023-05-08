@@ -399,18 +399,25 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
         leaf_to_parent_cell.reserve(data[startIJK_vec.size()+1]-> size(0)); // Correct size.
         //
         const auto& leaf_view = coarse_grid.leafGridView();
-        const auto& layout = Dune::mcmgElementLayout();
-        Dune::MultipleCodimMultipleGeomTypeMapper mapper(leaf_view, layout);
+        Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LeafGridView> elemMapper(leaf_view, Dune::mcmgElementLayout());
         // Allocate a vector for the concentration
-        std::vector<double> c(mapper.size());
+        std::vector<int> leaf_to_parent_cell_mcmgtMapper(elemMapper.size());
         //
         for (const auto& element: elements(leaf_view)){
             BOOST_CHECK( ((element.level() >= 0) || (element.level() < static_cast<int>(startIJK_vec.size()) +1)));
             if (element.hasFather()) { // leaf_cell has a father!
                 leaf_to_parent_cell[element.index()] = element.father().index();
+
+                auto index = elemMapper.index(element);
+                // leaf_to_parent_cell_mcmgtMapper
+                    
                 std::cout << "Leaf cell: " <<  element.index() << '\n';
                 std::cout << "Level cell index: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][1]
                           << " in level: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][0] << '\n';
+
+                std::cout << '\n';
+                std::cout << "Mapper approach: " << index << '\n';
+                
             }   
         }
     }
