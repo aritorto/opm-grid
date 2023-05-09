@@ -73,7 +73,8 @@ namespace Dune
             /// @brief
             /// @todo Doc me!
             /// @param
-            IndexSet(){}
+            IndexSet() : IndexSet(0,0)
+            {} 
             
             IndexSet(std::size_t numCells, std::size_t numPoints)
             {
@@ -237,8 +238,8 @@ namespace Dune
             {
                 IdType myId = 0;
                 for( int c=0; c<EntityType::codimension; ++c )
-                    myId += grid_.indexSet().size( c );
-                return  myId + e.index();
+                    myId += grid_.indexSet().size( c ); // total amount of entities of codim == c ? in certain LGR? level0, or leafview?
+                return  myId + e.index(); // total entities codim 0 + total codim 1 + total codim 2 + total codim 3 + entity index
             }
             const CpGridData& grid_;
         };

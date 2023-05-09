@@ -43,7 +43,7 @@ along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 void Dune::cpgrid::HierarchicIterator::stackChildren_(const Entity<0>& target)
 {
     // Load sons of target onto the iterator stack
-    if (!target.isLeaf()){
+    if (!target.isLeaf() && (target.level() < maxLevel_)){
         const auto& [lgr_level, children_list] = target.pgrid_-> parent_to_children_cells_[target.index()];
         // GET CHILD GRID
         const auto& lgr_grid =  (*(target.pgrid_-> level_data_ptr_))[lgr_level];

@@ -408,12 +408,14 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
         for (const auto& element: elements(leaf_view)){
             BOOST_CHECK( ((element.level() >= 0) || (element.level() < static_cast<int>(startIJK_vec.size()) +1)));
             if (element.hasFather()) { // leaf_cell has a father!
-                leaf_to_parent_cell[element.index()] = element.father().index();
+                leaf_to_parent_cell[element.index()] = element.father().index(); // do this only using mappers.
+                // mapper level0
 
                
                 leaf_to_parent_cell_mcmgtMapper[element.index()] = element.father().index();
                 const auto& id = (*idSet).id(element);
-                auto index = elemMapper.index(element);
+                auto index = elemMapper.index(element); //
+                //  auto parent_index = level0Mapper(elemnt.father());
                 
                 
                     
