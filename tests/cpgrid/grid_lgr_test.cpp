@@ -393,50 +393,39 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
             }
         }
 
-        
-
         std::vector<int> leaf_to_parent_cell; // To store parent cell index, when leaf cell has a parent. Empty entry otherwise.
         leaf_to_parent_cell.resize(data[startIJK_vec.size()+1]-> size(0)); // Correct size.
-        //
         const auto& leaf_view = coarse_grid.leafGridView();
-        Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LeafGridView> elemMapper(leaf_view, Dune::mcmgElementLayout());
-        const auto& idSet = (*data[startIJK_vec.size()+1]).local_id_set_;
-        // Allocate a vector for the concentration
-        std::vector<int> leaf_to_parent_cell_mcmgtMapper;
-        leaf_to_parent_cell_mcmgtMapper.resize(data[startIJK_vec.size()+1]-> size(0));
-        //
+        const auto& level0_view = coarse_grid.levelGridView(0);
+        Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LeafGridView> leafMapper(leaf_view, Dune::mcmgElementLayout());
+        Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LevelGridView> level0Mapper(level0_view, Dune::mcmgElementLayout());
+        const auto& leaf_idSet = (*data[startIJK_vec.size()+1]).local_id_set_;
+        const auto& level0_idSet = (*data[0]).local_id_set_;
         for (const auto& element: elements(leaf_view)){
             BOOST_CHECK( ((element.level() >= 0) || (element.level() < static_cast<int>(startIJK_vec.size()) +1)));
             if (element.hasFather()) { // leaf_cell has a father!
-                leaf_to_parent_cell[element.index()] = element.father().index(); // do this only using mappers.
-                // mapper level0
-
-               
-                leaf_to_parent_cell_mcmgtMapper[element.index()] = element.father().index();
-                const auto& id = (*idSet).id(element);
-                auto index = elemMapper.index(element); //
-                //  auto parent_index = level0Mapper(elemnt.father());
-                
-                
-                    
-                std::cout << "Leaf cell: " <<  element.index() << " element.index() " <<  element.index() << '\n';
+                leaf_to_parent_cell[leafMapper.index(element)] = level0Mapper.index(element.father());
+                const auto& id = (*leaf_idSet).id(element);
+                const auto& parent_id = (*level0_idSet).id(element.father());
+                std::cout << "Leaf cell: " <<  element.index() << ", element.index(): " <<  element.index() << ", and id:" << id << '\n';
                 std::cout << "Father index: " << element.father().index() <<  " is equal to : "
-                          << leaf_to_parent_cell[element.index()] << " and " << leaf_to_parent_cell_mcmgtMapper[element.index()] << '\n';
+                          << leaf_to_parent_cell[element.index()] << ", and parent_id: " << parent_id << '\n';
                 std::cout << "Level cell index: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][1]
                           << " in level: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][0] << '\n';
-
+            }
+            else
+            {
+                leaf_to_parent_cell[leafMapper.index(element)] = element.pgrid_->leaf_to_level_cells_[element.index()][1];
+                    //level0Mapper.index(element);
+                std::cout << "leafMapper.index(element): " << leafMapper.index(element) << '\n';
+                std::cout << "leaf_to_parent_cell: " <<  leaf_to_parent_cell[leafMapper.index(element)] <<'\n';
                 std::cout << '\n';
-                std::cout << "Mapper approach. Index: " << index << '\n';
-                std::cout << "Mapper approach. id: " << id << '\n';
-                std::cout << "Mapper size: " << elemMapper.size() << '\n';
-                std::cout << '\n';
-
-                std::cout << "leaf_to_parent_cell size: " << leaf_to_parent_cell.size() << '\n';
-                std::cout << "leaf_to_parent_cell_mcmgtMapper size: " << leaf_to_parent_cell_mcmgtMapper.size() << '\n';
-                std::cout << '\n';
-            }   
+            }
         }
-    }
+        std::cout << '\n';
+        std::cout << "LeafMapper size: " << leafMapper.size() << '\n';
+        std::cout << "Level0Mapper size: " << level0Mapper.size() << '\n';   
+    } // end-if-are-disjoint
 }
 
 
