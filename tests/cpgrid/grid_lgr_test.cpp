@@ -413,18 +413,25 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
                 std::cout << "Level cell index: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][1]
                           << " in level: " << (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[element.index()][0] << '\n';
             }
-            else
+            /* else
             {
                 leaf_to_parent_cell[leafMapper.index(element)] = element.pgrid_->leaf_to_level_cells_[element.index()][1];
                     //level0Mapper.index(element);
                 std::cout << "leafMapper.index(element): " << leafMapper.index(element) << '\n';
                 std::cout << "leaf_to_parent_cell: " <<  leaf_to_parent_cell[leafMapper.index(element)] <<'\n';
                 std::cout << '\n';
-            }
+                }*/
         }
         std::cout << '\n';
         std::cout << "LeafMapper size: " << leafMapper.size() << '\n';
-        std::cout << "Level0Mapper size: " << level0Mapper.size() << '\n';   
+        std::cout << "Level0Mapper size: " << level0Mapper.size() << '\n';
+        std::cout << "leaf_to_parent_cell size: " << leaf_to_parent_cell.size() << '\n';
+        std::cout << "leaf cells total: " << data[startIJK_vec.size()+1]-> size(0) << '\n';
+        for (const auto& el : leaf_to_parent_cell)
+        {
+            std::cout << el << '\n'; 
+        }
+        
     } // end-if-are-disjoint
 }
 

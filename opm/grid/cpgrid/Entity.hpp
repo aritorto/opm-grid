@@ -260,11 +260,16 @@ namespace Dune
             /// isValid method for EntitySeed
             /// \return return true if seed is pointing to a valid entity
             bool isValid () const;
-            
+
+            /// getOrigin()
+            /// Only for LeafView entities. Returns index of parent entity in level 0, if the leaf cell was born in any LGR.
+            /// Otherwise, returns "the old" index of the equivalent entity in level 0 (when leaf cell "comes" from level 0).
+            int getOrigin() const;
+
         protected:
             const CpGridData* pgrid_;
             DefaultGeometryPolicy local_geometry_;
-            const int* local_geometry_indices_storage_ptr;
+            const int* local_geometry_indices_storage_ptr_;
         };
 
     } // namespace cpgrid
@@ -534,7 +539,7 @@ Dune::cpgrid::Geometry<3,3> Dune::cpgrid::Entity<codim>::geometryInFather() cons
         // Indices of 'all the corners', in this case, 0-7 (required to construct a Geometry<3,3> object).
         allcorners_localEntity = {0,1,2,3,4,5,6,7};
         // Create a pointer to the first element of "cellfiedPatch_to_point" (required to construct a Geometry<3,3> object).
-        const int* localEntity_indices_storage_ptr = this -> local_geometry_indices_storage_ptr;
+        const int* localEntity_indices_storage_ptr = this -> local_geometry_indices_storage_ptr_;
         localEntity_indices_storage_ptr = &allcorners_localEntity[0];
         // Construct (and return) the Geometry<3,3> of the 'cellified patch'.
         return Dune::cpgrid::Geometry<3,3>(local_center, local_volume, local_geometry.geomVector(std::integral_constant<int,3>()),
@@ -543,6 +548,19 @@ Dune::cpgrid::Geometry<3,3> Dune::cpgrid::Entity<codim>::geometryInFather() cons
     
 }
 
+template<int codim>
+int Dune::cpgrid::Entity<codim>::getOrigin() const
+{
+    assert(pgrid_ == (*(pgrid_->level_data_ptr_)).back().get()); // Check entity belongs to the LeafView
+    if (hasFather())
+    {
+        return this->father().index(); 
+            }
+    else
+    {
+        return pgrid_ -> leaf_to_level_cells_[this->index()][1];
+    }
+}
 
 } // namespace cpgrid
 } // namespace Dune
