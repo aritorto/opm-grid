@@ -437,7 +437,6 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
         const auto& level0_view = coarse_grid.levelGridView(0);
         Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LeafGridView> leafMapper(leaf_view, Dune::mcmgElementLayout());
         Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LevelGridView> level0Mapper(level0_view, Dune::mcmgElementLayout());
-        // Dune::CartesianIndexMapper<Dune::CpGrid> level0CartMapper(coarse_grid);
         const auto& leaf_idSet = (*data[startIJK_vec.size()+1]).local_id_set_;
         const auto& level0_idSet = (*data[0]).local_id_set_;
         for (const auto& element: elements(leaf_view)){
@@ -451,12 +450,6 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
                 BOOST_CHECK(element.father().index() == leaf_to_parent_cell[element.index()]);
                 BOOST_CHECK(element.father().index() == parent_id);
                 BOOST_CHECK(element.father().index() == level0Mapper.index(element.father()));
-                /*std::array<int,3> elemFatherIJK;
-                coarse_grid.getIJK(element.father().index(), elemFatherIJK);
-                std::array<int,3> fromCartMapperIJK;
-                level0CartMapper.cartesianCoordinate(element.father().index(), fromCartMapperIJK);
-                BOOST_CHECK( elemFatherIJK == fromCartMapperIJK);
-                BOOST_CHECK( element.father().index() == level0CartMapper.cartesianIndex(element.father().index()));*/
             }
         }
     }
