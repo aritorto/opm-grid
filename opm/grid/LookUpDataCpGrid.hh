@@ -1,6 +1,6 @@
 //===========================================================================
 //
-// File: LookUpData.hpp
+// File: LookUpDataCpGrid.hpp
 //
 // Created: Tue May 25 11:45:00 2023
 //
@@ -32,6 +32,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <dune/grid/common/mcmgmapper.hh>
+#include <opm/grid/cpgrid/CartesianIndexMapper.hpp>
 namespace Dune
 {
 template <typename GridType>
@@ -44,8 +46,11 @@ class LookUpData<Dune::CpGrid>
 {
 public:
     // Constructor taking a CpGrid object
-    LookUpData(const Dune::CpGrid&){
-    }
+    LookUpData(const Dune::CpGrid& grid) :
+        gridView_(grid.leafGridView()),
+        elemMapper_(gridView_, Dune::mcmgElementLayout()),
+        cartMapper_(grid)
+    {}
 
     template<typename feature_type>
     int operator()(const Dune::cpgrid::Entity<0>& elem, const std::vector<feature_type>& feature_vec)
@@ -53,6 +58,10 @@ public:
         // elem.getOrigin() Get entity in level 0 (either parent cell, or equivalent cell, or 'itself' if grid_ = level 0)
         return feature_vec[elem.getOrigin().index()];
     }
+protected:
+    CpGrid::LeafGridView gridView_;
+    Dune::MultipleCodimMultipleGeomTypeMapper<CpGrid::LeafGridView> elemMapper_;
+    Dune::CartesianIndexMapper<CpGrid> cartMapper_;
 
 }; // end LookUpData<CpGrid> class
 }
