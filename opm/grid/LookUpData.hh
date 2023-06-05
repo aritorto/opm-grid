@@ -34,6 +34,7 @@ along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <dune/grid/common/mcmgmapper.hh>
 #include <opm/grid/cpgrid/Entity.hpp>
+#include <opm/grid/common/CartesianIndexMapper.hpp> // "CartesianIndexMapper not specialized for given grid"
 
 namespace Dune
 {
@@ -44,7 +45,8 @@ public:
     // Constructor taking a CpGrid object
     LookUpData(const GridType& grid) :
         leaf_view_(grid.leafGridView()),
-        leafMapper_(leaf_view_, Dune::mcmgElementLayout())
+        leafMapper_(leaf_view_, Dune::mcmgElementLayout()),
+        leafCartMapper_(grid)
     {
     }
 
@@ -57,6 +59,7 @@ public:
 protected:
     typename GridType::LeafGridView leaf_view_;
     Dune::MultipleCodimMultipleGeomTypeMapper<typename GridType::LeafGridView> leafMapper_;
+    Dune::CartesianIndexMapper<GridType> leafCartMapper_; // currently not supported for general grid?
 
 
 }; // end LookUpData class
