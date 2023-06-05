@@ -68,9 +68,8 @@ namespace Dune
 {
 
     class CpGrid;
-
-    template<typename GridType>
-    class LookUpData;
+    template<typename GridType> class LookUpData;
+    template<typename GridType> class CartesianIndexMapper;
 
     namespace cpgrid
     {
@@ -231,6 +230,7 @@ namespace Dune
         friend class cpgrid::Entity<1>;
         friend class cpgrid::Entity<2>;
         friend class cpgrid::Entity<3>;
+        friend class CartesianIndexMapper<Dune::CpGrid>;
         friend class LookUpData<Dune::CpGrid>;
         template<int dim>
         friend cpgrid::Entity<dim> createEntity(const CpGrid&,int,bool);

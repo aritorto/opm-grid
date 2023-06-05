@@ -77,8 +77,8 @@ class EclipseState;
 namespace Dune
 {
 class CpGrid;
-
 template<typename GridType> class LookUpData;
+template<typename GridType> class CartesianIndexMapper;
 
 namespace cpgrid
 {
@@ -137,6 +137,7 @@ class CpGridData
     friend class HierarchicIterator;
     friend class Dune::cpgrid::IndexSet;
     friend class Dune::LookUpData<Dune::CpGrid>;
+    friend class Dune::CartesianIndexMapper<Dune::CpGrid>;
 
     friend
     void ::disjointPatches_check(Dune::CpGrid&,
