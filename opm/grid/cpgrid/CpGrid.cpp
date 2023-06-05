@@ -130,7 +130,6 @@ CpGrid::CpGrid()
     data_.push_back(std::make_shared<cpgrid::CpGridData>(data_));
     current_view_data_ = data_[0].get();
     global_id_set_ptr_ = std::make_shared<cpgrid::GlobalIdSet>(*current_view_data_);
-    
 }
 
 CpGrid::CpGrid(MPIHelper::MPICommunicator comm)
@@ -143,7 +142,6 @@ CpGrid::CpGrid(MPIHelper::MPICommunicator comm)
     data_.push_back(std::make_shared<cpgrid::CpGridData>(comm, data_));
     current_view_data_= data_[0].get();
     global_id_set_ptr_ = std::make_shared<cpgrid::GlobalIdSet>(*current_view_data_);
-    
 }
 
 std::vector<int>
@@ -1406,7 +1404,7 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
     auto& l0_parent_to_children_cells = (*data_[0]).parent_to_children_cells_;
     l0_parent_to_children_cells.resize(data_[0]-> size(0), std::make_tuple(-1, std::vector<int>()));
     //
-    // Get patches corner, face, and cell indices. We instantiate them with level1 info and then insert other levels info. 
+    // Get patches corner, face, and cell indices. We instantiate them with level1 info and then insert other levels info.
     std::vector<int> all_patch_corners = (*data_[0]).getPatchCorners(startIJK_vec[0], endIJK_vec[0]);
     std::vector<int> all_patch_faces = (*data_[0]).getPatchFaces(startIJK_vec[0], endIJK_vec[0]);
     std::vector<int> all_patch_cells = (*data_[0]).getPatchCells(startIJK_vec[0], endIJK_vec[0]);

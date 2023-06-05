@@ -48,7 +48,10 @@
 #include <opm/grid/cpgpreprocess/preprocess.h>
 #include <opm/grid/utility/platform_dependent/reenable_warnings.h> //  Not really needed it seems, but alas.
 #include "common/GridEnums.hpp"   
-#include <opm/grid/utility/OpmWellType.hpp>  
+#include <opm/grid/utility/OpmWellType.hpp>
+//#include <opm/grid/LookUpDataCpGrid.hh>
+
+
 
 #include <iostream>
 #if ! HAVE_MPI
@@ -65,6 +68,9 @@ namespace Dune
 {
 
     class CpGrid;
+
+    template<typename GridType>
+    class LookUpData;
 
     namespace cpgrid
     {
@@ -225,6 +231,7 @@ namespace Dune
         friend class cpgrid::Entity<1>;
         friend class cpgrid::Entity<2>;
         friend class cpgrid::Entity<3>;
+        friend class LookUpData<Dune::CpGrid>;
         template<int dim>
         friend cpgrid::Entity<dim> createEntity(const CpGrid&,int,bool);
         friend void ::disjointPatches_check(Dune::CpGrid&,

@@ -34,6 +34,8 @@
 
 #include <dune/grid/common/mcmgmapper.hh>
 #include <opm/grid/cpgrid/CartesianIndexMapper.hpp>
+#include <opm/grid/CpGrid.hpp>
+
 namespace Dune
 {
 template <typename GridType>
@@ -50,7 +52,11 @@ public:
         gridView_(grid.leafGridView()),
         elemMapper_(gridView_, Dune::mcmgElementLayout()),
         cartMapper_(grid)
-    {}
+    {
+          std::vector<int> global_cell(grid.data_[0]->size(0), 0);
+          std::iota(global_cell.begin()+1, global_cell.end(), 1); // from entry[1], adds +1 per entry: {0,1,2,3,...}
+          (*(grid.data_[0])).global_cell_ = global_cell;
+    }
 
     template<typename feature_type>
     int operator()(const Dune::cpgrid::Entity<0>& elem, const std::vector<feature_type>& feature_vec)
