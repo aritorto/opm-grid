@@ -501,28 +501,28 @@ Dune::cpgrid::Geometry<3,3> Dune::cpgrid::Entity<codim>::geometryInFather() cons
         // reference element of each parent cell is the unit cube. Here, (eIJK[*]-"shift")/cells_per_dim[*]
         // Get the local coordinates of the entity (in the reference unit cube).
         FieldVector<double, 3> corners_in_father_reference_elem_temp[8] = {
-            // corner '0'
+            // corner '0' 'ijk'
             { double(eIJK[0]-child0_IJK[0])/cells_per_dim[0], double(eIJK[1]-child0_IJK[1])/cells_per_dim[1],
               double(eIJK[2]-child0_IJK[2])/cells_per_dim[2] },
-            // corner '1'
+            // corner '1' '(i+1)jk'
             { double(eIJK[0]-child0_IJK[0]+1)/cells_per_dim[0], double(eIJK[1]-child0_IJK[1])/cells_per_dim[1],
               double(eIJK[2]-child0_IJK[2])/cells_per_dim[2] },
-            // corner '2'
+            // corner '2' 'i(j+1)k'
             { double(eIJK[0]-child0_IJK[0])/cells_per_dim[0], double(eIJK[1]-child0_IJK[1]+1)/cells_per_dim[1],
               double(eIJK[2]-child0_IJK[2])/cells_per_dim[2] },
-            // corner '3'
+            // corner '3' '(i+1)(j+1)k'
             { double(eIJK[0]-child0_IJK[0]+1)/cells_per_dim[0], double(eIJK[1]-child0_IJK[1]+1)/cells_per_dim[1],
               double(eIJK[2]-child0_IJK[2])/cells_per_dim[2] },
-            // corner '4'
+            // corner '4'  'ij(k+1)'
             { double(eIJK[0]-child0_IJK[0])/cells_per_dim[0], double(eIJK[1]-child0_IJK[1])/cells_per_dim[1],
               double(eIJK[2]-child0_IJK[2]+1)/cells_per_dim[2] },
-            // corner '5'
+            // corner '5'  '(i+1)j(k+1)'
             { double(eIJK[0]-child0_IJK[0]+1)/cells_per_dim[0], double(eIJK[1]-child0_IJK[1])/cells_per_dim[1],
               double(eIJK[2]-child0_IJK[2]+1)/cells_per_dim[2] },
-            // corner '6'
+            // corner '6'  'i(j+1)(k+1)'
             { double(eIJK[0]-child0_IJK[0])/cells_per_dim[0], double(eIJK[1]-child0_IJK[1]+1)/cells_per_dim[1],
               double(eIJK[2]-child0_IJK[2]+1)/cells_per_dim[2] },
-            // corner '7'
+            // corner '7'  '(i+1)(j+1)(k+1)'
             { double(eIJK[0]-child0_IJK[0]+1)/cells_per_dim[0], double(eIJK[1]-child0_IJK[1]+1)/cells_per_dim[1],
               double(eIJK[2]-child0_IJK[2]+1)/cells_per_dim[2] }};
         auto in_father_reference_elem_corners = std::make_shared<EntityVariable<cpgrid::Geometry<0, 3>, 3>>();

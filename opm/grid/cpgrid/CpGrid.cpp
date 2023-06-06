@@ -1695,7 +1695,8 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
     leaf_cells.resize(cell_count);
     leaf_cell_to_point.resize(cell_count);
     // Auxiliary vector to store global_cell_ information
-    std::vector<int> aux_global_cell(cell_count);
+    std::vector<int> aux_global_cell;
+    aux_global_cell.resize(cell_count);
     // For cells that do not have a parent, we set {-1,-1} by defualt and rewrite later for actual children
     leaf_child_to_parent_cells.resize(cell_count, std::array<int,2>({-1,-1}));
     for (int leafCellIdx = 0; leafCellIdx < cell_count; ++leafCellIdx){
@@ -1752,7 +1753,7 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
             auto& [level, levelIdx]  = leaf_to_level_cells[leafCellIdx]; // {level, cell index in that level} (level != 0)
             leaf_child_to_parent_cells[leafCellIdx] = (*data_[level]).child_to_parent_cells_[levelIdx]; //{0, parent cell index}
             aux_global_cell[leafCellIdx] =
-                (*data_[0]).global_cell_[leaf_child_to_parent_cells[leafCellIdx][1]]; // {0, idx cell}
+                (*data_[0]).global_cell_[(*data_[level]).child_to_parent_cells_[levelIdx][1]]; // {0, idx cell}
             // Cell to point.
             for (int corn = 0; corn < 8; ++corn) {
                 leaf_cell_to_point[leafCellIdx][corn] = level_to_leaf_corners[level][old_cell_to_point[corn]];
