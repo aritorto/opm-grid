@@ -1770,12 +1770,14 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
     leaf_cell_to_face.makeInverseRelation(leaf_face_to_cell);
     //  Add Leaf View to data_.
     (this-> data_).push_back(leaf_view_ptr);
-    current_view_data_ = data_[num_patches +1].get();
     // Leaf  index_set_
     (*data_[num_patches +1]).index_set_ = std::make_unique<cpgrid::IndexSet>(data_[num_patches+1]->size(0), data_[num_patches+1]->size(3));
     // Leaf local_id_set_
     (*data_[num_patches +1]).local_id_set_ = std::make_shared<const cpgrid::IdSet>(*data_[num_patches+1]);
-    (*data_[num_patches +1]).global_cell_ = aux_global_cell; 
+    (*data_[num_patches +1]).global_cell_ = aux_global_cell;
+    // Set logical_cartesian_size_ of LeafView equal to the one from level 0, even if it does not coincide with #cells in each axe.
+    (*data_[num_patches +1]).logical_cartesian_size_ = (*data_[0]).logical_cartesian_size_;
+    current_view_data_ = data_[num_patches +1].get();
 }
 
 
