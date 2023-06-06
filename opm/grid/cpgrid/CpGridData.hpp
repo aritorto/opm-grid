@@ -296,6 +296,20 @@ public:
         ijk[2] = gc / logical_cartesian_size_[1];
     }
 
+    /// @brief
+    ///    Extract Cartesian index triplet (i,j,k) of an ANY cell.
+    ///
+    /// @param [in] c
+    ///    Any cell index.
+    ///
+    /// @param [out] ijk  Cartesian index triplet
+    void getIJKofAnyCell(int c, std::array<int,3>& ijk) const
+    {
+        ijk[0] = c % logical_cartesian_size_[0];  c /= logical_cartesian_size_[0];
+        ijk[1] = c % logical_cartesian_size_[1];
+        ijk[2] = c / logical_cartesian_size_[1];
+    }
+
 private:
     /// @brief Compute amount of cells in each direction of a patch of cells. (Cartesian grid required).
     ///

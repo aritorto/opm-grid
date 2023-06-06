@@ -1455,7 +1455,7 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
         // Re-write entries of actual parent/Create the ones for child cells in each level (not default value {-1,-1} needed for LGRs).
         assert(!parent_to_children_cells.empty());
         (*data_[patch +1]).child_to_parent_cells_.resize(child_to_parent_cells.size());
-        (*data_[patch +1]).global_cell_.resize(data_[patch +1] ->size(0));
+        (*data_[patch +1]).global_cell_.resize(child_to_parent_cells.size());
         for (const auto& [trueParent, children_list] : parent_to_children_cells){
             l0_parent_to_children_cells[trueParent] = std::make_tuple(patch +1, children_list); // {level/LGR, {child0, child1, ...}}
             assert(!children_list.empty());

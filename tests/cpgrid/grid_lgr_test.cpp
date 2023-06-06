@@ -176,7 +176,8 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
                         {
                             referenceElem_entity_center[c] += (it-> geometryInFather().center())[c];
                         }
-                        // std::cout << it->index() << '\n';
+                        std::cout << it->index() << '\n';
+                        std::cout << (it -> geometryInFather().center()) << '\n';
                     }
                     for (int c = 0; c < 3; ++c)
                     {
@@ -274,7 +275,7 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
                     BOOST_CHECK( entity.getOrigin().level() == 0);
                     // Get IJK of the old index
                     std::array<int,3> entityOldIJK;
-                    (*data[0]).getIJK(entityOldIdx, entityOldIJK); // ijk
+                    (*data[0]).getIJKofAnyCell(entityOldIdx, entityOldIJK); // ijk
                     // Get the entity cell_to_face_ on the LeafView
                     const auto& leaf_cell_to_face =
                         (*data[startIJK_vec.size()+1]).cell_to_face_[Dune::cpgrid::EntityRep<0>(entity.index(), true)];
@@ -469,7 +470,7 @@ BOOST_AUTO_TEST_CASE(refine_patch)
     refinePatch_and_check(coarse_grid, {cells_per_dim}, {startIJK}, {endIJK}, {lgr_name});
 }
 
-/*BOOST_AUTO_TEST_CASE(refine_patch_one_cell)
+BOOST_AUTO_TEST_CASE(refine_patch_one_cell)
 {
     // Create a grid
     Dune::CpGrid coarse_grid;
@@ -570,7 +571,7 @@ BOOST_AUTO_TEST_CASE(pathces_share_faceB)
     BOOST_CHECK_THROW(coarse_grid.addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgr_name_vec), std::logic_error);
     std::cout << "Patches are NOT disjoint" << "\n";
 }
-*/
+
 
 
 

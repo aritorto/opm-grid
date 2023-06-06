@@ -488,14 +488,14 @@ Dune::cpgrid::Geometry<3,3> Dune::cpgrid::Entity<codim>::geometryInFather() cons
             cells_per_dim = (*lgr_grid).cells_per_dim_;
 
             const auto& entity_lgrIdx = pgrid_ -> leaf_to_level_cells_[this->index()][1]; // leaf_to_level_cells_[cell] = {level, index}
-            (*lgr_grid).getIJK(entity_lgrIdx, eIJK);
-            (*lgr_grid).getIJK(child0_Idx, child0_IJK);
+            (*lgr_grid).getIJKofAnyCell(entity_lgrIdx, eIJK);
+            (*lgr_grid).getIJKofAnyCell(child0_Idx, child0_IJK);
         }
         else // Getting grid dimension and IJK entity index when pgrid_ is an LGR
         {
-            pgrid_ -> getIJK(this->index(), eIJK);
+            pgrid_ -> getIJKofAnyCell(this->index(), eIJK);
             cells_per_dim = pgrid_ -> cells_per_dim_;
-            pgrid_ -> getIJK(child0_Idx, child0_IJK);
+            pgrid_ -> getIJKofAnyCell(child0_Idx, child0_IJK);
         }
         // Transform the local coordinates that comes from the refinemnet in such a way that the
         // reference element of each parent cell is the unit cube. Here, (eIJK[*]-"shift")/cells_per_dim[*]
