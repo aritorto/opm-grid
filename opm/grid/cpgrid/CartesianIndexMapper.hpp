@@ -56,12 +56,13 @@ public:
     int cartesianIndex( const int compressedElementIndex ) const
     {
         assert(  compressedElementIndex >= 0 && compressedElementIndex < compressedSize() );
-        return (*(grid_.data_[0])).global_cell_[compressedElementIndex];
+        return grid_.globalCell()[compressedElementIndex];
     }
 
     void cartesianCoordinate(const int compressedElementIndex, std::array<int,dimension>& coords) const
     {
-        grid_.getIJK(compressedElementIndex, coords);
+        grid_.getIJK(compressedElementIndex, coords); // TO BE MODIFIED
+        // Given the leafview-cell-idx, get the {level, cell idx in that level} and use getIJK of that CpGridData object
     }
 };
 
