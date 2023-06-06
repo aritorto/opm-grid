@@ -40,7 +40,7 @@ public:
 
     const std::array<int, dimension>& cartesianDimensions() const
     {
-        return (*(grid_.data_[0])).logical_cartesian_size_;
+        return grid_.logicalCartesianSize();
     }
 
     int cartesianSize() const
@@ -50,7 +50,7 @@ public:
 
     int compressedSize() const
     {
-        return  grid_.size(0,0); // (*(grid_.data_[0])).global_cell_.size();
+        return  grid_.globalCell().size();
     }
 
     int cartesianIndex( const int compressedElementIndex ) const
@@ -61,7 +61,7 @@ public:
 
     void cartesianCoordinate(const int compressedElementIndex, std::array<int,dimension>& coords) const
     {
-        (*(grid_.data_[0])).getIJK(compressedElementIndex, coords);
+        grid_.getIJK(compressedElementIndex, coords);
     }
 };
 
