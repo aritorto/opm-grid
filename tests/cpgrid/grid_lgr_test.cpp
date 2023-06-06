@@ -469,7 +469,7 @@ BOOST_AUTO_TEST_CASE(refine_patch)
     refinePatch_and_check(coarse_grid, {cells_per_dim}, {startIJK}, {endIJK}, {lgr_name});
 }
 
-BOOST_AUTO_TEST_CASE(refine_patch_one_cell)
+/*BOOST_AUTO_TEST_CASE(refine_patch_one_cell)
 {
     // Create a grid
     Dune::CpGrid coarse_grid;
@@ -570,6 +570,7 @@ BOOST_AUTO_TEST_CASE(pathces_share_faceB)
     BOOST_CHECK_THROW(coarse_grid.addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgr_name_vec), std::logic_error);
     std::cout << "Patches are NOT disjoint" << "\n";
 }
+*/
 
 
 

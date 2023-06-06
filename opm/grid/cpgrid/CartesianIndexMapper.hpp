@@ -53,7 +53,7 @@ public:
 
     int compressedSize() const
     {
-        return  (*(grid_.data_[0])).global_cell_.size();
+        return  grid_.size(0,0); // (*(grid_.data_[0])).global_cell_.size();
     }
 
     int cartesianIndex( const int compressedElementIndex ) const

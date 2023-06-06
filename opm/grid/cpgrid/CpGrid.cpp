@@ -1432,9 +1432,6 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
         (*data_[patch +1]).level_ = patch +1;
         // Add the name of each LGR in this->lgr_names_
         this -> lgr_names_[lgr_name_vec[patch]] = patch +1; // {"name_lgr", level}
-        std::vector<int> l_global_cell(data_[patch+1]->size(0), 0); 
-        std::iota(l_global_cell.begin()+1, l_global_cell.end(), 1); // from entry[1], adds +1 per entry: {0,1,2,3,...}
-        (*data_[patch+1]).global_cell_ = l_global_cell;
         //          index_set_
         (*data_[patch+1]).index_set_ = std::make_unique<cpgrid::IndexSet>(data_[patch+1]->size(0), data_[patch+1]->size(3));
         //          local_id_set_
@@ -1458,11 +1455,13 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
         // Re-write entries of actual parent/Create the ones for child cells in each level (not default value {-1,-1} needed for LGRs).
         assert(!parent_to_children_cells.empty());
         (*data_[patch +1]).child_to_parent_cells_.resize(child_to_parent_cells.size());
+        (*data_[patch +1]).global_cell_.resize(data_[patch +1] ->size(0));
         for (const auto& [trueParent, children_list] : parent_to_children_cells){
             l0_parent_to_children_cells[trueParent] = std::make_tuple(patch +1, children_list); // {level/LGR, {child0, child1, ...}}
             assert(!children_list.empty());
             for (const auto& child : children_list){
                 (*data_[patch +1]).child_to_parent_cells_[child] = {0, trueParent}; //{level parent-cell, parent-cell-index}
+                (*data_[patch +1]).global_cell_[child] = (*data_[0]).global_cell_[trueParent];
             }
         }
         // Populate old_to_new_boundaryPatchCorners
@@ -1695,6 +1694,8 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
     }
     leaf_cells.resize(cell_count);
     leaf_cell_to_point.resize(cell_count);
+    // Auxiliary vector to store global_cell_ information
+    std::vector<int> aux_global_cell(cell_count);
     // For cells that do not have a parent, we set {-1,-1} by defualt and rewrite later for actual children
     leaf_child_to_parent_cells.resize(cell_count, std::array<int,2>({-1,-1}));
     for (int leafCellIdx = 0; leafCellIdx < cell_count; ++leafCellIdx){
@@ -1710,6 +1711,7 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
         // Auxiliary cell_to_face
         std::vector<cpgrid::EntityRep<1>> aux_cell_to_face;
         if (level_cellIdx[0] == 0) { // Cell comes from level0
+            aux_global_cell[leafCellIdx] = (*data_[0]).global_cell_[leaf_to_level_cells[leafCellIdx][1]]; // {0, idx cell}
             // Cell to point.
             for (int corn = 0; corn < 8; ++corn) {
                 // Auxiliary bool to identity boundary patch corners
@@ -1749,6 +1751,8 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
             // Get level where cell was created and its local index, to later deduce its parent.
             auto& [level, levelIdx]  = leaf_to_level_cells[leafCellIdx]; // {level, cell index in that level} (level != 0)
             leaf_child_to_parent_cells[leafCellIdx] = (*data_[level]).child_to_parent_cells_[levelIdx]; //{0, parent cell index}
+            aux_global_cell[leafCellIdx] =
+                (*data_[0]).global_cell_[leaf_child_to_parent_cells[leafCellIdx][1]]; // {0, idx cell}
             // Cell to point.
             for (int corn = 0; corn < 8; ++corn) {
                 leaf_cell_to_point[leafCellIdx][corn] = level_to_leaf_corners[level][old_cell_to_point[corn]];
@@ -1770,6 +1774,7 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
     (*data_[num_patches +1]).index_set_ = std::make_unique<cpgrid::IndexSet>(data_[num_patches+1]->size(0), data_[num_patches+1]->size(3));
     // Leaf local_id_set_
     (*data_[num_patches +1]).local_id_set_ = std::make_shared<const cpgrid::IdSet>(*data_[num_patches+1]);
+    (*data_[num_patches +1]).global_cell_ = aux_global_cell; 
 }
 
 
