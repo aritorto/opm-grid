@@ -100,7 +100,7 @@ void lookup_check(const Dune::CpGrid& grid)
             std::array<int,3> elemFatherIJK_fromMapper;
             cartMapper.cartesianCoordinate(elem.father().index(), elemFatherIJK_fromMapper);
             std::array<int,3> elemFatherIJK_fromLevel0;
-            (*data[0]).getIJK(elem.father().index(), elemFatherIJK_fromLevel0);
+            (*data[0]).getIJKofAnyCell(elem.father().index(), elemFatherIJK_fromLevel0);
             BOOST_CHECK(elemFatherIJK_fromLevel0 == elemFatherIJK_fromMapper);
         }
     }

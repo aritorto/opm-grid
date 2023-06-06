@@ -36,9 +36,6 @@ public:
         : grid_( grid ),
           cartesianSize_( computeCartesianSize() )
     {
-        std::vector<int> l0_global_cell( grid_.data_[0] ->size(0), 0); 
-        std::iota(l0_global_cell.begin()+1, l0_global_cell.end(), 1); // from entry[1], adds +1 per entry: {0,1,2,3,...}
-        (*(grid_.data_[0])).global_cell_ = l0_global_cell;
     }
 
     const std::array<int, dimension>& cartesianDimensions() const
