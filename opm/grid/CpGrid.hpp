@@ -407,6 +407,9 @@ namespace Dune
         /// Return maximum level defined in this grid. Levels are 0 and 1,  maxlevel = 1 (not counting leafview), 0 = the coarsest level.
         int maxLevel() const;
 
+        /// When distributed data is not empty, returns true when current_view_data_ coincides with distributed_data_.back()
+        bool isDistributed() const;
+
         /// Iterator to first entity of given codim on level
         template<int codim>
         typename Traits::template Codim<codim>::LevelIterator lbegin (int level) const;

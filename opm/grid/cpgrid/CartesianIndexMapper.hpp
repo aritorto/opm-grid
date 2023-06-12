@@ -66,7 +66,6 @@ public:
         // Get origin-cell index (parent cell if existent, or equivalent cell in level 0), and compute its IJK [in level 0]
         (*(grid_.data_[0])).getIJK(entity.getOrigin().index(), coords);
     }
-
     /* void cartesianCoordinateInLevel(const int compressedElementIndex, std::array<int,dimension>& coords) const
     {
         // Get level and index of the cell in that level

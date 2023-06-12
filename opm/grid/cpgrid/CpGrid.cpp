@@ -598,6 +598,17 @@ int CpGrid::maxLevel() const
     }
 }
 
+bool CpGrid::isDistributed() const // WOULD CHANGE THE NAME
+{
+    if (!distributed_data_.empty()) {
+        //Dune::cpgrid::CpGridData back = *(distributed_data_.back()); // expensive copy! because distrubuted_data_.back() is const!
+        return *current_view_data_ ==  static_cast<Dune::cpgrid::CpGridData>( *(distributed_data_.back())); //back;
+    }
+    else{
+        OPM_THROW_NOLOG(std::logic_error, "distributed_data_ is empty"); // PROBABLY NOT CORRECT
+    }
+}
+
 template<int codim>
 typename CpGridTraits::template Codim<codim>::LevelIterator CpGrid::lbegin (int level) const{
     if (level<0 || level>maxLevel())
