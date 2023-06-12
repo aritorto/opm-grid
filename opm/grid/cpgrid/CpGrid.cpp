@@ -598,14 +598,13 @@ int CpGrid::maxLevel() const
     }
 }
 
-bool CpGrid::isDistributed() const // WOULD CHANGE THE NAME
+bool CpGrid::isDistributed() const
 {
     if (!distributed_data_.empty()) {
-        //Dune::cpgrid::CpGridData back = *(distributed_data_.back()); // expensive copy! because distrubuted_data_.back() is const!
-        return *current_view_data_ ==  static_cast<Dune::cpgrid::CpGridData>( *(distributed_data_.back())); //back;
+        return current_view_data_ == distributed_data_.back().get();
     }
     else{
-        OPM_THROW_NOLOG(std::logic_error, "distributed_data_ is empty"); // PROBABLY NOT CORRECT
+        return distributed_data_.empty(); // false
     }
 }
 
