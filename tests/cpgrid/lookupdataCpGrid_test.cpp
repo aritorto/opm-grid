@@ -102,11 +102,18 @@ void lookup_check(const Dune::CpGrid& grid)
             BOOST_CHECK(l0_value == cartMapper.cartesianIndex(elem.index()));
             std::array<int,3> elemFatherIJK_fromMapper;
             cartMapper.cartesianCoordinate(elem.index(), elemFatherIJK_fromMapper);
-            // cartesianCoordinate: grid_.getIJK(compressedElementIndex, coords) which relies on
-            //     global_cell_ and logical_cartesian_size_ of current_view (LeafView).
+            // cartesianCoordinate 
             std::array<int,3> elemFatherIJK;
             (*data[0]).getIJKofAnyCell(elem.father().index(), elemFatherIJK);
             BOOST_CHECK(elemFatherIJK == elemFatherIJK_fromMapper);
+        }
+        else {
+            std::array<int,3> elemOriginIJK_fromMapper;
+            cartMapper.cartesianCoordinate(elem.index(), elemOriginIJK_fromMapper);
+            // cartesianCoordinate
+            std::array<int,3> elemOriginIJK;
+            (*data[0]).getIJKofAnyCell(elem.getOrigin().index(), elemOriginIJK);
+            BOOST_CHECK(elemOriginIJK == elemOriginIJK_fromMapper);
         }
     }
 }
