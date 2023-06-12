@@ -106,6 +106,16 @@ void lookup_check(const Dune::CpGrid& grid)
             std::array<int,3> elemFatherIJK;
             (*data[0]).getIJKofAnyCell(elem.father().index(), elemFatherIJK);
             BOOST_CHECK(elemFatherIJK == elemFatherIJK_fromMapper);
+            // cartesianCoordinateInLevel
+            // std::array<int,3> elemLevelIJK_fromMapper;
+            // cartMapper.cartesianCoordinateInLevel(elem.index(), elemLevelIJK_fromMapper);
+            //const auto& level = elem.level();
+            //const auto& level_cell_idx = (*data.back()).leaf_to_level_cells_[elem.index()][1];
+            // std::array<int,3> elemLevelIJK;
+            //(*data[level]).getIJKofAnyCell(level_cell_idx, elemLevelIJK);
+            //BOOST_CHECK(elemLevelIJK == elemLevelIJK_fromMapper);
+            // std::cout << elemLevelIJK[0] << " " << elemLevelIJK[1] << " " << elemLevelIJK[2] << '\n';
+            // std::cout << elemLevelIJK_fromMapper[0] << " " << elemLevelIJK_fromMapper[1] << " " << elemLevelIJK_fromMapper[2]  << '\n';
         }
         else {
             std::array<int,3> elemOriginIJK_fromMapper;
@@ -114,6 +124,12 @@ void lookup_check(const Dune::CpGrid& grid)
             std::array<int,3> elemOriginIJK;
             (*data[0]).getIJKofAnyCell(elem.getOrigin().index(), elemOriginIJK);
             BOOST_CHECK(elemOriginIJK == elemOriginIJK_fromMapper);
+            // cartesianCoordinateInLevel
+            //std::array<int,3> elemLevelIJK;
+            // cartMapper.cartesianCoordinateInLevel(elem.index(), elemLevelIJK);
+            // BOOST_CHECK(elemOriginIJK == elemLevelIJK);
+            // std::cout << elemLevelIJK[0] << " " << elemLevelIJK[1] << " " << elemLevelIJK[2] << '\n';
+            //std::cout << elemOriginIJK_fromMapper[0] << " " << elemOriginIJK_fromMapper[1] << " " << elemOriginIJK_fromMapper[2]  << '\n';
         }
     }
 }

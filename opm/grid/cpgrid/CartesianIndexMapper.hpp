@@ -62,10 +62,18 @@ public:
     void cartesianCoordinate(const int compressedElementIndex, std::array<int,dimension>& coords) const
     {
         // Build entity so we can get its origin
-        const auto& entity = Dune::cpgrid::Entity<0>( *(grid_.data_.back()), compressedElementIndex, true);
+        const auto& entity = Dune::cpgrid::Entity<0>( *grid_.current_view_data_, compressedElementIndex, true);
         // Get origin-cell index (parent cell if existent, or equivalent cell in level 0), and compute its IJK [in level 0]
         (*(grid_.data_[0])).getIJK(entity.getOrigin().index(), coords);
     }
+
+    /* void cartesianCoordinateInLevel(const int compressedElementIndex, std::array<int,dimension>& coords) const
+    {
+        // Get level and index of the cell in that level
+        const auto& level_levelIdx = (*(grid_.data_.back())).leaf_to_level_cells_[compressedElementIndex];
+        // Compute IJK in the corresponding LGR.
+        (*(grid_.data_[level_levelIdx[0]])).getIJK(level_levelIdx[1], coords);
+        }*/
 };
 
 } // end namespace Opm
