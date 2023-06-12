@@ -1,6 +1,6 @@
 //===========================================================================
 //
-// File: LookUpDataCpGrid.hpp
+// File: LookUpDataCpGrid.hh
 //
 // Created: Tue May 25 11:45:00 2023
 //

@@ -100,15 +100,13 @@ void lookup_check(const Dune::CpGrid& grid)
             //  It's suppossed to be current_view(LeafView) -> global_cell_[compressedIdx] = <level0>.global_cell_[parent/equiv cell]
             const auto& l0_value = (*data[0]).global_cell_[elem.father().index()];
             BOOST_CHECK(l0_value == cartMapper.cartesianIndex(elem.index()));
-            std::array<int,3> elemIJK_fromMapper;
-            cartMapper.cartesianCoordinate(elem.index(), elemIJK_fromMapper);
+            std::array<int,3> elemFatherIJK_fromMapper;
+            cartMapper.cartesianCoordinate(elem.index(), elemFatherIJK_fromMapper);
             // cartesianCoordinate: grid_.getIJK(compressedElementIndex, coords) which relies on
             //     global_cell_ and logical_cartesian_size_ of current_view (LeafView).
-            //     This has to be modifed!!!!!!!
-            
-            // std::array<int,3> elemIJK_fromLeafView;
-            //(*data[0]).getIJKofAnyCell(elem.father().index(), elemFatherIJK_fromLevel0);
-            //BOOST_CHECK(elemFatherIJK_fromLevel0 == elemFatherIJK_fromMapper);*/
+            std::array<int,3> elemFatherIJK;
+            (*data[0]).getIJKofAnyCell(elem.father().index(), elemFatherIJK);
+            BOOST_CHECK(elemFatherIJK == elemFatherIJK_fromMapper);
         }
     }
 }

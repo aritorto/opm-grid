@@ -61,8 +61,11 @@ public:
 
     void cartesianCoordinate(const int compressedElementIndex, std::array<int,dimension>& coords) const
     {
-        grid_.getIJK(compressedElementIndex, coords); // TO BE MODIFIED
-        // Given the leafview-cell-idx, get the {level, cell idx in that level} and use getIJK of that CpGridData object
+        //grid_.getIJK(compressedElementIndex, coords); // TO BE MODIFIED
+        // Build entity so we can get its origin
+        const auto& entity = Dune::cpgrid::Entity<0>( *(grid_.data_.back()), compressedElementIndex, true);
+        // Get origin-cell index (parent cell if existent, or equivalent cell in level 0), and compute its IJK [in level 0]
+        (*(grid_.data_[0])).getIJK(entity.getOrigin().index(), coords);
     }
 };
 
