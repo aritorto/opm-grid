@@ -53,9 +53,6 @@ public:
         elemMapper_(gridView_, Dune::mcmgElementLayout()),
         cartMapper_(grid)
     {
-          std::vector<int> global_cell(grid.data_[0]->size(0), 0);
-          std::iota(global_cell.begin()+1, global_cell.end(), 1); // from entry[1], adds +1 per entry: {0,1,2,3,...}
-          (*(grid.data_[0])).global_cell_ = global_cell;
     }
 
     template<typename feature_type>
