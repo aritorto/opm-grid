@@ -33,6 +33,7 @@
 */
 
 #include <dune/grid/common/mcmgmapper.hh>
+#include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 
 
 
