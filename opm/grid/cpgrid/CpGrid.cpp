@@ -1795,14 +1795,7 @@ const std::map<std::string,int>& CpGrid::getLgrNameToLevel() const{
 
 std::array<double,3> CpGrid::getEclCentroid(const int& elemIdx) const
 {
-    if (!(this -> distributed_data_.empty()))
-    {
-        return this -> distributed_data_[0] -> computeEclCentroid(elemIdx);
-    }
-    else
-    {
-        return this-> current_view_data_ -> computeEclCentroid(elemIdx);
-    }
+    return this-> current_view_data_ -> computeEclCentroid(elemIdx);
 }
 
 std::array<double,3> CpGrid::getEclCentroid(const cpgrid::Entity<0>& elem) const

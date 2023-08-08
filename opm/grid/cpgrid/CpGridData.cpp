@@ -2265,14 +2265,10 @@ CpGridData::refinePatch(const std::array<int,3>& cells_per_dim, const std::array
 std::array<double,3> CpGridData::computeEclCentroid(const int idx) const
 {
     const auto& cell_to_point_indices = this -> cell_to_point_[idx];
-    const int points = cell_to_point_indices.size();
-    std::vector<double> X;
-    std::vector<double> Y;
-    std::vector<double> Z;
-    X.resize(points);
-    Y.resize(points);
-    Z.resize(points);
-    for (int cornIdx = 0; cornIdx < points; ++cornIdx) {
+    std::array<double,8> X;
+    std::array<double,8> Y;
+    std::array<double,8> Z;
+    for (int cornIdx = 0; cornIdx < 8; ++cornIdx) {
         X[cornIdx] = (this-> geometry_.geomVector(std::integral_constant<int,3>())
                       -> get(cell_to_point_indices[cornIdx])).center()[0];
         Y[cornIdx] = (this-> geometry_.geomVector(std::integral_constant<int,3>())
@@ -2281,9 +2277,9 @@ std::array<double,3> CpGridData::computeEclCentroid(const int idx) const
                       -> get(cell_to_point_indices[cornIdx])).center()[2];
 
     }
-    return std::array<double,3> { { std::accumulate(X.begin(), X.end(), 0.0) / double(points),
-            std::accumulate(Y.begin(), Y.end(), 0.0) / double(points),
-            std::accumulate(Z.begin(), Z.end(), 0.0) / double(points) } };
+    return std::array<double,3> { { std::accumulate(X.begin(), X.end(), 0.0) / 8.0,
+            std::accumulate(Y.begin(), Y.end(), 0.0) / 8.0,
+            std::accumulate(Z.begin(), Z.end(), 0.0) / 8.0 } };
 }
 
 std::array<double,3> CpGridData::computeEclCentroid(const Entity<0>& elem) const
