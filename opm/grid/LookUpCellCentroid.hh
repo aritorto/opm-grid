@@ -65,10 +65,10 @@ struct LookUpCellCentroid
     /// \param [in] EclipseGrid
     explicit LookUpCellCentroid(const GridView& gridView,
                                 const Dune::CartesianIndexMapper<Grid>& cartMapper,
-                                const Opm::EclipseGrid& eclgrid) :
+                                const Opm::EclipseGrid* eclgrid) :
         gridView_(gridView),
         cartMapper_(&cartMapper),
-        eclGrid_(&eclgrid)
+        eclGrid_(eclgrid)
     {
     }
 

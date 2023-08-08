@@ -93,7 +93,7 @@ void createEclGridPolyhedralGrid_and_checkCentroid(const std::string& deckString
     using GridView = std::remove_cv_t< typename std::remove_reference<decltype(leafGridView)>::type>;
 
     const Dune::CartesianIndexMapper<Dune::PolyhedralGrid<3,3>> gridCartMapper(grid);
-    const Opm::LookUpCellCentroid<Dune::PolyhedralGrid<3,3>,GridView> lookUpCellCentroid(leafGridView, gridCartMapper, eclGrid);
+    const Opm::LookUpCellCentroid<Dune::PolyhedralGrid<3,3>,GridView> lookUpCellCentroid(leafGridView, gridCartMapper, &eclGrid);
     // Mapper
     const Dune::MultipleCodimMultipleGeomTypeMapper<GridView> mapper(leafGridView, Dune::mcmgElementLayout());
 

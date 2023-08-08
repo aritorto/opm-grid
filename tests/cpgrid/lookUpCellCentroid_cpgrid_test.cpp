@@ -87,7 +87,7 @@ void createEclGridCpGrid_and_checkCentroid(const std::string& deckString)
     const Dune::CartesianIndexMapper<Dune::CpGrid> gridCartMapper(grid);
 
     const Opm::LookUpCellCentroid<Dune::CpGrid, Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>
-        lookUpCellCentroid(leafGridView, gridCartMapper, eclGrid);
+        lookUpCellCentroid(leafGridView, gridCartMapper, &eclGrid);
 
     for (const auto& element: Dune::elements(leafGridView)){
         const auto& elemEclCentroid = eclGrid.getCellCenter(gridCartMapper.cartesianIndex(element.index()));
