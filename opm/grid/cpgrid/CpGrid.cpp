@@ -1795,12 +1795,19 @@ const std::map<std::string,int>& CpGrid::getLgrNameToLevel() const{
 
 std::array<double,3> CpGrid::getEclCentroid(const int& elemIdx) const
 {
-    return this-> current_view_data_ -> computeEclCentroid(elemIdx);
+    if (!(this -> distributed_data_.empty()))
+    {
+        return this -> distributed_data_[0] -> computeEclCentroid(elemIdx);
+    }
+    else
+    {
+        return this-> current_view_data_ -> computeEclCentroid(elemIdx);
+    }
 }
 
 std::array<double,3> CpGrid::getEclCentroid(const cpgrid::Entity<0>& elem) const
 {
-    return this-> current_view_data_ -> computeEclCentroid(elem.index());
+    return this-> getEclCentroid(elem.index());
 }
 
 } // namespace Dune
