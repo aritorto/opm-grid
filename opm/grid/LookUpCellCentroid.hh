@@ -122,7 +122,7 @@ Opm::LookUpCellCentroid<Grid,GridView>::operator()(std::size_t elemIdx) const
     std::cout << "Rank: " << rank << '\n';
     std::cout << "ElementIndex: " << elemIdx << '\n';
     const auto centroid = this -> eclGrid_ -> getCellCenter(this -> cartMapper_->cartesianIndex(elemIdx));
-    std::cout << "Centroid: " << centroid[0] << " " << centroid[1] << " " << centroid[2] << '\n';
+    std::cout << "CentroidFromMyBranch: " << centroid[0] << " " << centroid[1] << " " << centroid[2] << '\n';
     return centroid;
 }
 
@@ -134,6 +134,6 @@ Opm::LookUpCellCentroid<Grid,GridView>::operator()(std::size_t elemIdx) const
     static_assert(std::is_same_v<Grid,GridType>);
     std::cout << "ElementIndex: " << elemIdx << '\n';
     const auto centroid =  this -> gridView_.grid().getEclCentroid(elemIdx);
-    std::cout << "Centroid: " << centroid[0] << " " << centroid[1] << " " << centroid[2] << '\n';
+    std::cout << "CentroidFromMyBranch: " << centroid[0] << " " << centroid[1] << " " << centroid[2] << '\n';
     return centroid;
 }
