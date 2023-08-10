@@ -38,6 +38,7 @@
 
 
 #include <type_traits>
+#include <iostream>
 
 
 namespace Dune
@@ -116,7 +117,10 @@ typename std::enable_if_t<!std::is_same_v<GridType,Dune::CpGrid>, std::array<dou
 Opm::LookUpCellCentroid<Grid,GridView>::operator()(std::size_t elemIdx) const
 {
     static_assert(std::is_same_v<Grid,GridType>);
-    return this -> eclGrid_ -> getCellCenter(this -> cartMapper_->cartesianIndex(elemIdx));
+    std::cout << "ElementIndex: " << elemIdx << '\n';
+    const auto centroid = this -> eclGrid_ -> getCellCenter(this -> cartMapper_->cartesianIndex(elemIdx));
+    std::cout << "Centroid: " << centroid[0] << " " << centroid[1] << " " << centroid[2] << '\n';
+    return centroid;
 }
 
 template<typename Grid, typename GridView>
@@ -125,5 +129,8 @@ typename std::enable_if_t<std::is_same_v<GridType,Dune::CpGrid>,std::array<doubl
 Opm::LookUpCellCentroid<Grid,GridView>::operator()(std::size_t elemIdx) const
 {
     static_assert(std::is_same_v<Grid,GridType>);
-    return this -> gridView_.grid().getEclCentroid(elemIdx);
+    std::cout << "ElementIndex: " << elemIdx << '\n';
+    const auto centroid =  this -> gridView_.grid().getEclCentroid(elemIdx);
+    std::cout << "Centroid: " << centroid[0] << " " << centroid[1] << " " << centroid[2] << '\n';
+    return centroid;
 }
