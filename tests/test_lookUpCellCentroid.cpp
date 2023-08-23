@@ -1,6 +1,6 @@
 //===========================================================================
 //
-// File: lookUpCellCentroid_cpgrid_test.cpp
+// File: test_lookUpCellCentroid.cpp
 //
 // Created: Wed 26.07.2023 16:00:00
 //
@@ -13,7 +13,7 @@
 //===========================================================================
 
 /*
-  Copyright 2023 Equinor ASA.
+  Copyright 2023 Equinor ASA. 
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -73,35 +73,35 @@ struct Fixture
 
 BOOST_GLOBAL_FIXTURE(Fixture);
 
-void createEclGridCpGrid_and_checkCentroid(const std::string& deckString)
+void createEclGridCpGrid_and_checkEclCentroid(const std::string& deckString)
 {
     Opm::Parser parser;
     const auto deck = parser.parseString(deckString);
 
     Dune::CpGrid grid;
-    Opm::EclipseGrid eclGrid(deck);
+    Opm::EclipseGrid ecl_grid(deck);
 
-    grid.processEclipseFormat(&eclGrid, nullptr, false, false, false);
+    grid.processEclipseFormat(&ecl_grid, nullptr, false, false, false);
+    
+    const auto& gridLeafView = grid.leafGridView();
+    Dune::CartesianIndexMapper<Dune::CpGrid> gridCartMapper =  Dune::CartesianIndexMapper<Dune::CpGrid>(grid);
 
-    const auto& leafGridView = grid.leafGridView();
-    const Dune::CartesianIndexMapper<Dune::CpGrid> gridCartMapper(grid);
-
-    const Opm::LookUpCellCentroid<Dune::CpGrid, Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>
-        lookUpCellCentroid(leafGridView, gridCartMapper, &eclGrid);
-
-    for (const auto& element: Dune::elements(leafGridView)){
-        const auto& elemEclCentroid = eclGrid.getCellCenter(gridCartMapper.cartesianIndex(element.index()));
+    const Opm::LookUpCellCentroid<Dune::CpGrid, Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>> lookUpCellCentroid
+        = Opm::LookUpCellCentroid<<Dune::CpGrid, Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>
+        (gridLeafView, gridCartMapper);
+    
+    for (const auto& element: Dune::elements(gridLeafView)){
+        const auto& elemEclCentroid = ecl_grid.getCellCenter(gridCartMapper.cartesianIndex(element.index()));
         const auto& elemCpGridEclCentroid_Entity = grid.getEclCentroid(element);
         const auto& elemCpGridEclCentroid_Index = grid.getEclCentroid(element.index());
-        const auto& centroid = lookUpCellCentroid(element.index());
         for (int coord = 0; coord < 3; ++coord)
         {
-            BOOST_CHECK_CLOSE(elemEclCentroid[coord], elemCpGridEclCentroid_Entity[coord], 1e-9);
-            BOOST_CHECK_CLOSE(elemEclCentroid[coord], elemCpGridEclCentroid_Index[coord], 1e-9);
-            BOOST_CHECK_CLOSE(elemEclCentroid[coord], centroid[coord], 1e-9);
+            BOOST_CHECK_CLOSE(elemEclCentroid[coord],elemCpGridEclCentroid_Entity[coord] , 1e-9);
+            BOOST_CHECK_CLOSE(elemEclCentroid[coord],elemCpGridEclCentroid_Index[coord] , 1e-9);
         }
-    }
+    } 
 }
+
 
 
 BOOST_AUTO_TEST_CASE(stringA)
@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(stringA)
         5*0.15
         /)";
 
-    createEclGridCpGrid_and_checkCentroid(deckString);
+    createEclGridCpGrid_and_checkEclCentroid(deckString);
 }
 
 
@@ -166,21 +166,21 @@ BOOST_AUTO_TEST_CASE(stringB)
         0.02   NOGAP   1*   1*
         /
         )";
-
-    createEclGridCpGrid_and_checkCentroid(deckString);
+    
+    createEclGridCpGrid_and_checkEclCentroid(deckString);   
 }
 
 BOOST_AUTO_TEST_CASE(stringC)
 {/*
-   Cell corners:      COORD
-   0 {0, 0, 2}        line 1: corners 0 and 4
-   1 {4, 1, 1}        line 2: corners 1 and 5
-   2 {2, 5, 1}        line 3: corners 2 and 6
-   3 {5, 4, 1}        line 4: corners 3 and 7
-   4 {1, 1, 5}
-   5 {4, 0, 4}
-   6 {0, 4, 5}
-   7 {4, 3, 4} */
+Cell corners:      COORD
+0 {0, 0, 2}        line 1: corners 0 and 4
+1 {4, 1, 1}        line 2: corners 1 and 5
+2 {2, 5, 1}        line 3: corners 2 and 6
+3 {5, 4, 1}        line 4: corners 3 and 7
+4 {1, 1, 5}
+5 {4, 0, 4}
+6 {0, 4, 5}
+7 {4, 3, 4} */
     const std::string deckString =
         R"(RUNSPEC
         DIMENS
@@ -201,20 +201,20 @@ BOOST_AUTO_TEST_CASE(stringC)
         /
         )";
 
-    createEclGridCpGrid_and_checkCentroid(deckString);
+    createEclGridCpGrid_and_checkEclCentroid(deckString);   
 }
 
 BOOST_AUTO_TEST_CASE(stringD)
 {/*
-   Cell corners:                     COORD
-   0 {0, 0, 0}                       line 1: corners 0 and 4
-   1 {1, 0, 0}                       line 2: corners 1 and 5
-   2 {0, 1, 0}                       line 3: corners 2 and 6
-   3 {1, 1, 0}                       line 4: corners 3 and 7
-   4 {0, 0, 1}
-   5 {1, 0, 0}  coincides with 1
-   6 {0, 1, 1}
-   7 {1, 1, 0}  coincides with 3 */
+Cell corners:                     COORD
+0 {0, 0, 0}                       line 1: corners 0 and 4
+1 {1, 0, 0}                       line 2: corners 1 and 5
+2 {0, 1, 0}                       line 3: corners 2 and 6
+3 {1, 1, 0}                       line 4: corners 3 and 7
+4 {0, 0, 1}
+5 {1, 0, 0}  coincides with 1
+6 {0, 1, 1}
+7 {1, 1, 0}  coincides with 3 */
     const std::string deckString =
         R"(RUNSPEC
         DIMENS
@@ -235,20 +235,20 @@ BOOST_AUTO_TEST_CASE(stringD)
         /
         )";
 
-    createEclGridCpGrid_and_checkCentroid(deckString);
+    createEclGridCpGrid_and_checkEclCentroid(deckString);
 }
 
 BOOST_AUTO_TEST_CASE(stringE)
 {/*
-   Cell corners:       COORD
-   0  {0, 0, 0}        line 1: corners 0 and 4
-   1  {2, 0, 0}        line 2: corners 1 and 5
-   2  {0, 1, 0}        line 3: corners 2 and 6
-   3  {2, 1, 0}        line 4: corners 3 and 7
-   4  {1, 0, 1}
-   5  {3, 0, 1}
-   6  {1, 1, 1}
-   7  {3, 1, 1} */
+Cell corners:       COORD
+0  {0, 0, 0}        line 1: corners 0 and 4
+1  {2, 0, 0}        line 2: corners 1 and 5
+2  {0, 1, 0}        line 3: corners 2 and 6
+3  {2, 1, 0}        line 4: corners 3 and 7
+4  {1, 0, 1}
+5  {3, 0, 1}
+6  {1, 1, 1}
+7  {3, 1, 1} */
     const std::string deckString =
         R"(RUNSPEC
         DIMENS
@@ -269,6 +269,6 @@ BOOST_AUTO_TEST_CASE(stringE)
         /
         )";
 
-    createEclGridCpGrid_and_checkCentroid(deckString);
+    createEclGridCpGrid_and_checkEclCentroid(deckString);
 }
 
