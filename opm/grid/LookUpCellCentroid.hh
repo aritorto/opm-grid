@@ -38,6 +38,7 @@
 
 
 #include <type_traits>
+#include <exception>
 #include <iostream>
 #include <iomanip> // to use setprecision
 
@@ -134,7 +135,7 @@ Opm::LookUpCellCentroid<Grid,GridView>::operator()(std::size_t elemIdx) const
 {
     static_assert(std::is_same_v<Grid,GridType>);
     // const auto centroid =  this -> gridView_.grid().getEclCentroid(elemIdx);
-    if (eclGrid_ != nullptr)
+    try 
     {
     const auto centroid = this -> eclGrid_ -> getCellCenter(this -> cartMapper_->cartesianIndex(elemIdx));
     auto old = std::cout.precision();
@@ -143,8 +144,9 @@ Opm::LookUpCellCentroid<Grid,GridView>::operator()(std::size_t elemIdx) const
     std::cout << std::setprecision(old);
     return centroid;
     }
-    else
+    catch (const std::exception& e)
     {
-        OPM_THROW(std::logic_error, "Eclipse Grid ptr is a nullptr!");
+        std::cout <<  e.what() << std::endl;
+        
     }
 }
