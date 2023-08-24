@@ -147,6 +147,7 @@ Opm::LookUpCellCentroid<Grid,GridView>::operator()(std::size_t elemIdx) const
     catch (const std::exception& e)
     {
         std::cout <<  e.what() << std::endl;
+        throw std::runtime_error("Eclipse Grid ptr is a nullptr!");
         
     }
 }
