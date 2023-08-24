@@ -134,10 +134,17 @@ Opm::LookUpCellCentroid<Grid,GridView>::operator()(std::size_t elemIdx) const
 {
     static_assert(std::is_same_v<Grid,GridType>);
     // const auto centroid =  this -> gridView_.grid().getEclCentroid(elemIdx);
+    if (eclGrid_ != nullptr)
+    {
     const auto centroid = this -> eclGrid_ -> getCellCenter(this -> cartMapper_->cartesianIndex(elemIdx));
     auto old = std::cout.precision();
     std::cout << std::setprecision(10);
     std::cout << "CentroidFromMyBranch: " << centroid[0] << " " << centroid[1] << " " << centroid[2] << '\n';
     std::cout << std::setprecision(old);
     return centroid;
+    }
+    else
+    {
+        OPM_THROW(std::logic_error, "Eclipse Grid ptr is a nullptr!");
+    }
 }
