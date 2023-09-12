@@ -233,6 +233,23 @@ public:
     template<typename GridType = Grid>
     typename std::enable_if_t<std::is_same_v<GridType,Dune::CpGrid>,int> getOriginIndex(const int& elemIdx) const;
 
+    /// \brief: For general grids, it retunrs the same Entity cartesian index.
+    ///         For CpGrid, cartesian index of origin cell(parent/equivalent cell when element has no father) in level 0.
+    ///
+    /// \tparam     EntityType          Element type.
+    /// \param [in] element             EntityType object.
+    /// \return cartesianElementIndex.  Cartesian Index of the (origin) cell.
+    template<typename EntityType>
+    int getCartesianOriginIndexFromEntity(const EntityType& elem) const;
+
+    /// \brief: For general grids, it retunrs the same Entity cartesian index.
+    ///         For CpGrid, it returns cartesian index of origin cell (parent/equivalent cell when element has no father) in level 0.
+    ///
+    /// \param [in] elemIdx             Element Index.
+    /// \return cartesianElementIndex   Cartesian Index of the (origin) cell.
+    int getCartesianOriginIndex(const int& elemIdx) const;
+
+
 
 protected:
     const GridView& gridView_;
@@ -360,4 +377,17 @@ Opm::LookUpCartesianData<Grid,GridView>::getOriginIndex(const int& elemIdx) cons
     static_assert(std::is_same_v<Grid,GridType>);
     const auto& elem = Dune::cpgrid::Entity<0>(*(gridView_.grid().current_view_data_), elemIdx, true);
     return elem.getOrigin().index(); // getOrign() returns parent Entity or the equivalent Entity in level 0.
+}
+
+template<typename Grid, typename GridView>
+template<typename EntityType>
+int Opm::LookUpCartesianData<Grid,GridView>::getCartesianOriginIndexFromEntity(const EntityType& elem) const
+{
+    return cartMapper_-> cartesianIndex(this->getOriginIndexFromEntity<EntityType,Grid>(elem));
+}
+
+template<typename Grid, typename GridView>
+int Opm::LookUpCartesianData<Grid,GridView>::getCartesianOriginIndex(const int& elemIdx) const
+{
+    return cartMapper_-> cartesianIndex(this->getOriginIndex<Grid>(elemIdx));
 }

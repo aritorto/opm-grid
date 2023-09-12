@@ -116,6 +116,11 @@ void lookup_check(const Dune::PolyhedralGrid<3,3>& grid)
         BOOST_CHECK(featureInElemDoubleIDX == featureInElemDouble);
         BOOST_CHECK(featureInElemCartesianIDX == featureInElemCartesian);
         BOOST_CHECK(featureInElemDoubleCartesianIDX == featureInElemDoubleCartesian);
+        // Extra check for  element index
+        BOOST_CHECK(idx == lookUpData.getOriginIndexFromEntity(elem));
+        // Extra checks for cartesian element index
+        BOOST_CHECK(cartMapper.cartesianIndex(idx) == lookUpCartesianData.getCartesianOriginIndexFromEntity(elem));
+        BOOST_CHECK(cartMapper.cartesianIndex(idx) == lookUpCartesianData.getCartesianOriginIndex(idx));
     }
 
 }

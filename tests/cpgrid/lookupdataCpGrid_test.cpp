@@ -117,6 +117,12 @@ void lookup_check(const Dune::CpGrid& grid)
         // Extra checks related to ElemMapper
         BOOST_CHECK(featureInElem == level0Mapper.index(elem.getOrigin()) +3);
         BOOST_CHECK(featureInElem == fake_feature[lookUpData.getOriginIndexFromEntity(elem)]);
+        // Extra checks for  element index
+        BOOST_CHECK(level0Mapper.index(elem.getOrigin()) == lookUpData.getOriginIndexFromEntity(elem));
+        BOOST_CHECK(level0Mapper.index(elem.getOrigin()) == lookUpData.getOriginIndex(elem.index()));
+        // Extra checks for cartesian element index
+        BOOST_CHECK(cartMapper.cartesianIndex(elem.getOrigin().index()) == lookUpCartesianData.getCartesianOriginIndexFromEntity(elem));
+        BOOST_CHECK(cartMapper.cartesianIndex(elem.getOrigin().index()) == lookUpCartesianData.getCartesianOriginIndex(elem.index()));
         if (elem.hasFather()) { // leaf_cell has a father!
             const auto& id = (*leaf_idSet).id(elem);
             const auto& parent_id = (*level0_idSet).id(elem.father());
@@ -125,6 +131,10 @@ void lookup_check(const Dune::CpGrid& grid)
             BOOST_CHECK(elem.father().index() == featureInElem -3);
             BOOST_CHECK(elem.father().index() == parent_id);
             BOOST_CHECK(elem.father().index() == level0Mapper.index(elem.father()));
+            BOOST_CHECK(elem.father().index() == lookUpData.getOriginIndexFromEntity(elem));
+            // Extra checks for cartesian element index
+            BOOST_CHECK(cartMapper.cartesianIndex(elem.father().index()) == lookUpCartesianData.getCartesianOriginIndexFromEntity(elem));
+            BOOST_CHECK(cartMapper.cartesianIndex(elem.father().index()) == lookUpCartesianData.getCartesianOriginIndex(elem.index()));
         }
     }
 }
