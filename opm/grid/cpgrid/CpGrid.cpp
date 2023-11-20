@@ -506,7 +506,6 @@ CpGrid::scatterGrid(EdgeWeightMethod method,
         setupRecvInterface(importList, *cell_scatter_gather_interfaces_);
 
         distributed_data_[0]->distributeGlobalGrid(*this,*this->current_view_data_, computedCellPart);
-        // global_id_set_.insertIdSet(*distributed_data_[0]);
         (*global_id_set_ptr_).insertIdSet(*distributed_data_[0]);
         distributed_data_[0]-> index_set_.reset(new cpgrid::IndexSet(distributed_data_[0]->cell_to_face_.size(),
                                                                      distributed_data_[0]-> geomVector<3>().size()));
@@ -1849,6 +1848,9 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
     (*data_[num_patches +1]).index_set_ = std::make_unique<cpgrid::IndexSet>(data_[num_patches+1]->size(0), data_[num_patches+1]->size(3));
     // Leaf local_id_set_
     (*data_[num_patches +1]).local_id_set_ = std::make_shared<const cpgrid::IdSet>(*data_[num_patches+1]);
+    // Leaf global_id_set_
+    (*data_[num_patches +1]).global_id_set_ = std::make_shared<Dune::cpgrid::LevelGlobalIdSet>(&((*data_[num_patches +1]).local_id_set_),
+                                                                                               *data_[num_patches +1]);
 }
 
 
