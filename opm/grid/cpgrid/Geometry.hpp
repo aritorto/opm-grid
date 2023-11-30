@@ -1012,6 +1012,7 @@ namespace Dune
             {
                 using cpgrid::EntityRep;
                 std::vector<cpgrid::EntityRep<0>> neighboring_cells_of_one_face; // {index, orientation}
+                neighboring_cells_of_one_face.reserve(2); // maximum of 2 neighboring cells.
                 switch(constant_direction) {
                 case 0:  // {l,m,n} = {k,j,i}, constant in z-direction
                     // Orientation true when outer normal points 'from bottom to top'

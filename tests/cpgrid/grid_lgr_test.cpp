@@ -224,7 +224,7 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
                 // If entity.isLeaf(), then it == endIt (when dristibuted_data_ is empty)
                 BOOST_CHECK( it == endIt);
             }
-            // LeafView
+            // LeafView Cells
             for (int cell = 0; cell <  data[startIJK_vec.size()+1]-> size(0); ++cell)
             {
                 Dune::cpgrid::Entity<0> entity = Dune::cpgrid::Entity<0>((*coarse_grid.data_[startIJK_vec.size()+1]), cell, true);
@@ -408,17 +408,18 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
                     {
                         face_count +=1;
                     }
-                    /*std::cout << "Entity old index: " << entityOldIdx << "Entity leaf idx: " << entity.index() << '\n';
-                    std::cout << "Leaf cell_to_face_.size(): " << leaf_cell_to_face.size() << '\n';
-                    std::cout << "Face count: " << face_count << '\n';
-                    std::cout << "touch_patch_onLeftFace: " << touch_patch_onLeftFace << '\n';
-                    std::cout << "touch_patch_onRightFace: " << touch_patch_onRightFace << '\n';
-                    std::cout << "touch_patch_onFrontFace: " << touch_patch_onFrontFace << '\n';
-                    std::cout << "touch_patch_onBackFace: " << touch_patch_onBackFace << '\n';
-                    std::cout << "touch_patch_onBottomFace: " << touch_patch_onBottomFace << '\n';
-                    std::cout << "touch_patch_onTopFace: " << touch_patch_onTopFace << '\n';*/
                     BOOST_CHECK( leaf_cell_to_face.size() == face_count);
                 } // end else
+            } // end for-loop LeafView Cells
+
+            // Leaf grid View Faces
+            for (int face = 0; face <  data[startIJK_vec.size()+1]-> face_to_cell_.size(); ++face)
+            {
+                // Get the (face) entity (from level data).
+                const auto& faceEntity =  Dune::cpgrid::EntityRep<1>(face, true);
+                const auto& leaf_face_to_cell = (*data[startIJK_vec.size()+1]).face_to_cell_[faceEntity];
+                BOOST_CHECK( (leaf_face_to_cell.size() > 0) || (leaf_face_to_cell.size() < 3));
+                std::cout << "Face idx: " << faceEntity.index() << " " << leaf_face_to_cell.size() << std::endl;
             }
         } // end-level-for-loop
 
