@@ -40,6 +40,7 @@
 #include <opm/grid/utility/SparseTable.hpp>
 #include <map>
 #include <climits>
+#include <iostream>
 
 /// The namespace Dune is the main namespace for all Dune code.
 namespace Dune
@@ -327,7 +328,9 @@ namespace Dune
                         EntityRep<codim_to> to_ent = r[j];
                         int ind = to_ent.index();
                         ++new_sizes[ind];
-                    }
+                          if(new_sizes[ind]>2)
+                        std::cout << "More than two entries in for index"<< ind<<std::endl;
+                    } 
                 }
                 // Compute the cumulative sizes.
                 std::vector<int> cumul_sizes(new_sizes.size() + 1);

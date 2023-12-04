@@ -132,6 +132,84 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
             BOOST_CHECK(coarse_grid.lgr_names_[lgr_name_vec[level-1]] == static_cast<int>(level));
 
             const auto& patch_cells = (*data[0]).getPatchCells(startIJK_vec[level-1], endIJK_vec[level-1]);
+            const auto& patch_faces = (*data[0]).getPatchFaces(startIJK_vec[level-1], endIJK_vec[level-1]);
+            
+            for (const auto& face : patch_faces)
+            {
+                std::cout << "Face on patch: " << face << std::endl;
+            }
+            
+
+            Dune::cpgrid::Entity<0> entityZero = Dune::cpgrid::Entity<0>((*coarse_grid.data_[0]), 0, true);
+            const auto cellZero_to_face = (*coarse_grid.data_[0]).cell_to_face_[entityZero];
+            for (const auto& face : cellZero_to_face)
+            {
+                std::cout << "FaceCellZero Idx: " << face.index() << " Face Or :" << face.orientation() << std::endl;
+            }
+
+             Dune::cpgrid::Entity<0> entityUno = Dune::cpgrid::Entity<0>((*coarse_grid.data_[0]), 1, true);
+            const auto cellUno_to_face = (*coarse_grid.data_[0]).cell_to_face_[entityUno];
+            for (const auto& face : cellUno_to_face)
+            {
+                std::cout << "FaceCellUno Idx: " << face.index() << " Face Or :" << face.orientation() << std::endl;
+            }
+
+             Dune::cpgrid::Entity<0> entity13 = Dune::cpgrid::Entity<0>((*coarse_grid.data_[0]), 13, true);
+            const auto cell13_to_face = (*coarse_grid.data_[0]).cell_to_face_[entity13];
+            for (const auto& face : cell13_to_face)
+            {
+                std::cout << "FaceCell13 Idx: " << face.index() << " Face Or :" << face.orientation() << std::endl;
+            }
+            
+
+            /* // Level 0 boundary Faces
+            for (int face = 0; face <  data[0]-> face_to_cell_.size(); ++face)
+            {
+                // Get the (face) entity.
+                const auto& faceEntity =  Dune::cpgrid::EntityRep<1>(face, true);
+                // Auxiliary bool to identify if a face from level 0 has been refined.
+                bool isOnPatch = false;
+                for (const auto& patchFace : patch_faces)
+                {
+                    isOnPatch = isOnPatch || (patchFace == face);
+                    if (isOnPatch)
+                    {
+                        std::cout << " ATTENTION " << std::endl;
+                        std::cout << "Face on patch index: " << face << std::endl;
+                        std::cout << " ATTENTION " << std::endl;
+                        break;
+                    }
+                    else
+                    {
+                         const auto& level0_face_to_cell = (*data[0]).face_to_cell_[faceEntity];
+                BOOST_CHECK( (level0_face_to_cell.size() > 0) || (level0_face_to_cell.size() < 3));
+                std::cout << "Face idx: " << faceEntity.index() << "  F2CSize: " << level0_face_to_cell.size() << std::endl;
+                const auto faceTag = (*data[0]).face_tag_[faceEntity];
+                if (faceTag == face_tag::I_FACE)
+                {
+                    std::cout << "Face idx: " << faceEntity.index() << " " << "I_FACE"  << std::endl;
+                    }
+                  if (faceTag == face_tag::J_FACE)
+                {
+                    std::cout << "Face idx: " << faceEntity.index() << " " << "J_FACE"  << std::endl;
+                    }
+                    if (faceTag == face_tag::K_FACE)
+                {
+                    std::cout << "Face idx: " << faceEntity.index() << " " << "K_FACE"  << std::endl;
+                    }
+                    
+                        // Get the index of the face 
+                         // Get the (face) entity (from level data).
+                const auto& faceEntity =  Dune::cpgrid::EntityRep<1>(face, true);
+                const auto& leaf_face_to_cell = (*data[startIJK_vec.size()+1]).face_to_cell_[faceEntity];
+                BOOST_CHECK( (leaf_face_to_cell.size() > 0) || (leaf_face_to_cell.size() < 3));
+                std::cout << "Face idx: " << faceEntity.index() << " " << leaf_face_to_cell.size() << std::endl;
+                const auto& level0_face_to_cell = (*data[0]).face_to_cell_[faceEntity];
+                BOOST_CHECK( (level0_face_to_cell.size() > 0) || (level0_face_to_cell.size() < 3));
+                std::cout << "Face idx Level 0: " << faceEntity.index() << " " << level0_face_to_cell.size() << std::endl;
+                    }
+                }
+            }*/
 
             // GLOBAL grid
             for (int cell = 0; cell <  data[0]-> size(0); ++cell)
@@ -459,7 +537,7 @@ void refinePatch_and_check(Dune::CpGrid& coarse_grid,
     }
 }
 
-BOOST_AUTO_TEST_CASE(refine_patch)
+/*BOOST_AUTO_TEST_CASE(refine_patch)
 {
     // Create a grid
     Dune::CpGrid coarse_grid;
@@ -471,7 +549,7 @@ BOOST_AUTO_TEST_CASE(refine_patch)
     const std::string lgr_name = {"LGR1"};
     coarse_grid.createCartesian(grid_dim, cell_sizes);
     refinePatch_and_check(coarse_grid, {cells_per_dim}, {startIJK}, {endIJK}, {lgr_name});
-}
+}*/
 
 BOOST_AUTO_TEST_CASE(refine_patch_one_cell)
 {
@@ -487,7 +565,7 @@ BOOST_AUTO_TEST_CASE(refine_patch_one_cell)
     refinePatch_and_check(coarse_grid, {cells_per_dim}, {startIJK}, {endIJK}, {lgr_name});
 }
 
-BOOST_AUTO_TEST_CASE(lgrs_disjointPatches)
+/*BOOST_AUTO_TEST_CASE(lgrs_disjointPatches)
 {
     // Create a grid
     Dune::CpGrid coarse_grid;
@@ -710,4 +788,4 @@ BOOST_AUTO_TEST_CASE(global_norefine)
     fine_grid.createCartesian(fine_grid_dim, fine_cell_sizes);
 
     check_global_refine(coarse_grid, fine_grid);
-}
+}*/

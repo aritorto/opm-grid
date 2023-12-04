@@ -108,6 +108,10 @@ void Intersection::update()
                 if (has_no_nbcell) {
                     nbcell_ = std::numeric_limits<int>::max(); // neighbor is not within this process
                 } else {
+                    if (cells_of_face.size() != 2)
+                    {
+                        std::cout << "Issue here! \n" << std::endl;
+                    }
                     assert(cells_of_face.size() == 2);
                     if (cells_of_face[0].index() == index_) {
                         nbcell_ = cells_of_face[1].index();

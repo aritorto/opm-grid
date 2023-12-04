@@ -1724,14 +1724,14 @@ std::vector<int> CpGridData::getPatchFaces(const std::array<int,3>& startIJK, co
                         + (patch_dim[0]*patch_dim[1]*(patch_dim[2]+1))); // k_patch_faces
     int face_idx;
     // I_FACES
+     for (int i = startIJK[0]; i < endIJK[0]+1; ++i) {
     for (int j = startIJK[1]; j < endIJK[1]; ++j) {
-        for (int i = startIJK[0]; i < endIJK[0]+1; ++i) {
-            for (int k = startIJK[2]; k < endIJK[2]; ++k) {
+        for (int k = startIJK[2]; k < endIJK[2]; ++k) {
                 face_idx = (j*(grid_dim[0]+1)*grid_dim[2]) +(i*grid_dim[2]) + k;
                 patch_faces.push_back(face_idx);
             } // end k-for-loop
-        } // end i-for-loop
-    } // end j-for-loop
+        } // end j-for-loop
+    } // end i-for-loop
     // J_FACES
     for (int j = startIJK[1]; j < endIJK[1]+1; ++j) {
         for (int i = startIJK[0]; i < endIJK[0]; ++i) {
@@ -1743,16 +1743,16 @@ std::vector<int> CpGridData::getPatchFaces(const std::array<int,3>& startIJK, co
         } // end i-for-loop
     } // end j-for-loop
     // K_FACES
+      for (int k = startIJK[2]; k < endIJK[2]+1; ++k) {
     for (int j = startIJK[1]; j < endIJK[1]; ++j) {
         for (int i = startIJK[0]; i < endIJK[0]; ++i) {
-            for (int k = startIJK[2]; k < endIJK[2]+1; ++k) {
                 face_idx = (grid_dim[0]*(grid_dim[1]+1)*grid_dim[2]) //j_grid_faces
                     + ((grid_dim[0]+1)*grid_dim[1]*grid_dim[2])          // i_grid_faces
                     + (j*grid_dim[0]*(grid_dim[2]+1)) + (i*(grid_dim[2]+1))+ k;
                 patch_faces.push_back(face_idx);
-            } // end k-for-loop
-        } // end i-for-loop
-    } // end j-for-loop
+            } // end i-for-loop
+        } // end j-for-loop
+    } // end k-for-loop
     return patch_faces;
 }
 
