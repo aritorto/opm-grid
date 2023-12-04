@@ -315,6 +315,7 @@ namespace Dune
                         EntityRep<codim_to> to_ent = r[j];
                         int ind = to_ent.index();
                         maxind = std::max(ind, maxind);
+                        //  std::cout<< "Cell index: " << i << " Face idx: " << ind << std::endl;
                     }
                 }
                 // Build the new_sizes vector and compute datacount.
@@ -328,10 +329,14 @@ namespace Dune
                         EntityRep<codim_to> to_ent = r[j];
                         int ind = to_ent.index();
                         ++new_sizes[ind];
-                          if(new_sizes[ind]>2)
-                        std::cout << "More than two entries in for index"<< ind<<std::endl;
+                        /*if(new_sizes[ind]>2)
+                          { std::cout << "More than two entries in for index: "<< ind <<std::endl;
+                              std::cout<< "FaceIndex: " << i << " CellIdx: " << ind << std::endl;
+                              }*/
+                          
                     } 
                 }
+                std::cout << "Outside-loop new_sizes: " << new_sizes.size() << std::endl;
                 // Compute the cumulative sizes.
                 std::vector<int> cumul_sizes(new_sizes.size() + 1);
                 cumul_sizes[0] = 0;
