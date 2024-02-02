@@ -930,9 +930,26 @@ const CpGridFamily::Traits::LeafIndexSet& CpGrid::leafIndexSet() const
     return *current_view_data_->index_set_;
 }
 
-void CpGrid::globalRefine (int)
+void CpGrid::globalRefine (int refCount)
 {
-    std::cout << "Warning: Global refinement not implemented, yet." << std::endl;
+    // If grid is not CpGrid, or any of the assumptions for refinement is not fulfilled,
+    // addLgrUpdateLeafView will throw.
+    std::array<int,3> nxnynz = this->logicalCartesianSize();
+    std::vector<std::array<int,3>> cells_per_dim_vec;
+    cells_per_dim_vec.reserve(refCount);
+    std::vector<std::array<int,3>> startIJK_vec(refCount, {0,0,0});
+    std::vector<std::array<int,3>> endIJK_vec;
+    endIJK_vec.reserve(refCount);
+    std::vector<std::string> lgr_name_vec;
+    lgr_name_vec.reserve(refCount);
+    for (int lgr = 0; lgr < refCount; ++refCount) {
+        cells_per_dim_vec[lgr][0] = std::pow(nxnynz[0], lgr);
+        cells_per_dim_vec[lgr][1] = std::pow(nxnynz[1], lgr);
+        cells_per_dim_vec[lgr][2] = std::pow(nxnynz[2], lgr);
+        endIJK_vec[lgr] = cells_per_dim_vec[lgr];
+        lgr_name_vec[lgr] = "LGR" + std::to_string(lgr);
+    }
+    this->addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgr_name_vec);
 }
 
 const std::vector< Dune :: GeometryType >& CpGrid::geomTypes( const int codim ) const

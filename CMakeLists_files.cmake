@@ -119,6 +119,7 @@ if(Boost_VERSION_STRING VERSION_GREATER 1.53)
 	  tests/cpgrid/disjointPatches_test.cpp
 	  tests/cpgrid/eclCentroid_test.cpp
 	  tests/cpgrid/geometry_test.cpp
+	  tests/cpgrid/globalRefine_test.cpp
 	  tests/cpgrid/grid_lgr_test.cpp
 	  tests/cpgrid/lookUpCellCentroid_cpgrid_test.cpp
 	  tests/cpgrid/lookupdataCpGrid_test.cpp
