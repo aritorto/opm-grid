@@ -1113,20 +1113,43 @@ const Dune::FieldVector<double,3> CpGrid::faceCenterEcl(int cell_index, int face
     //   0---1
 
     // this follows the DUNE reference cube
-    static const int faceVxMap[ 6 ][ 4 ] = { {0, 2, 4, 6}, // face 0
-                                             {1, 3, 5, 7}, // face 1
-                                             {0, 1, 4, 5}, // face 2
-                                             {2, 3, 6, 7}, // face 3
-                                             {0, 1, 2, 3}, // face 4
-                                             {4, 5, 6, 7}  // face 5
+    static const int faceVxMap[ 6 ][ 4 ] = { {0, 2, 4, 6}, // face 0 -- left
+                                             {1, 3, 5, 7}, // face 1 -- right
+                                             {0, 1, 4, 5}, // face 2 -- front
+                                             {2, 3, 6, 7}, // face 3 -- back
+                                             {0, 1, 2, 3}, // face 4 -- bottom
+                                             {4, 5, 6, 7}  // face 5 -- top
     };
 
 
+    // For CpGrid with LGRs, a refined face with a coarse neighboring cell and a refined neighboring cell
+    // (that is when the face belongs to the boundary of an LGR and is located in the interior of the grid),
+    // unfortunately leads us to a different order of the faces, in cell_to_face_, depending on if the
+    // neighboring cell, here with cell_index index, is the coarse one or the refined one. Preceisely,
+    // cell_to_face_[cell_index - coarse neighboring cell] = { left, right, front, back, bottom, top} = {0,1,2,3,4,5} with
+    // the notation above, and
+    // cell_to_face_[cell_index - refined neighboring cell] = {bottom, front, left, right, back, top} = {2,3,1,4,0,5} with
+    // the notation used in faceVxMap. Therefore, we consider:
+    // --------- this follows the order created in Geometry::refine() for LGRs in CpGrid -------- 
+    static const int faceVxMapLGR[ 6 ][ 4 ] = { {0, 1, 4, 5}, // lgr_face 2 == face 0  -- left 
+                                                {2, 3, 6, 7}, // lgr_face 3 == face 1  -- right
+                                                {1, 3, 5, 7}, // lgr_face 1 == face 2  -- front
+                                                {0, 1, 2, 3}, // lgr_face 4 == face 3  -- back
+                                                {0, 2, 4, 6}, // lgr_face 0 == face 4  -- bottom
+                                                {4, 5, 6, 7}  // lgr_face 5 == face 5  -- top
+    };
+    const auto& elem =  Dune::cpgrid::Entity<0>(*current_view_data_, cell_index, true);
+    // bool switchOrder = (elem.level() > 0) || ()
+    
     assert (current_view_data_->cell_to_point_[cell_index].size() == 8);
     Dune::FieldVector<double,3> center(0.0);
     for( int i=0; i<4; ++i )
     {
-        center += vertexPosition(current_view_data_->cell_to_point_[cell_index][ faceVxMap[ face ][ i ] ]);
+        /* if ((elem.level() == 0) && (cell_to_face_[elem].size() >6))
+        {
+            //NEED EXACT FACE INFO, NOT ONLY TYPE  center += vertexPosition(current_view_data_->cell_to_face_[cell_index][ faceVxMap[ face ][ i ] ]);
+            }*/
+        center += vertexPosition(current_view_data_->cell_to_point_[cell_index][ elem.level() > 0 ? faceVxMapLGR[face][i] : faceVxMap[face][i] ]);
     }
 
     for (int i=0; i<3; ++i) {
