@@ -998,7 +998,7 @@ namespace Dune
         double cellCenterDepth(int cell_index) const;
 
 
-        const Vector faceCenterEcl(int cell_index, int face) const;
+        const Vector faceCenterEcl(int cell_index, int face, int faceIdxOnLeafGridView) const;
 
         const Vector faceAreaNormalEcl(int face) const;
 

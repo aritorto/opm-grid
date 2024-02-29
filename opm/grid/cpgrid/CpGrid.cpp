@@ -1098,7 +1098,7 @@ double CpGrid::cellCenterDepth(int cell_index) const
     return zz/nv;
 }
 
-const Dune::FieldVector<double,3> CpGrid::faceCenterEcl(int cell_index, int face) const
+const Dune::FieldVector<double,3> CpGrid::faceCenterEcl(int cell_index, int face, int faceIdxOnLeafGridView) const
 {
     // This method is an alternative to the method faceCentroid(...).
     // The face center is computed as a raw average of cell corners.
@@ -1130,33 +1130,38 @@ const Dune::FieldVector<double,3> CpGrid::faceCenterEcl(int cell_index, int face
     // the notation above, and
     // cell_to_face_[cell_index - refined neighboring cell] = {bottom, front, left, right, back, top} = {2,3,1,4,0,5} with
     // the notation used in faceVxMap. Therefore, we consider:
-    // --------- this follows the order created in Geometry::refine() for LGRs in CpGrid -------- 
-    static const int faceVxMapLGR[ 6 ][ 4 ] = { {0, 1, 4, 5}, // lgr_face 2 == face 0  -- left 
-                                                {2, 3, 6, 7}, // lgr_face 3 == face 1  -- right
-                                                {1, 3, 5, 7}, // lgr_face 1 == face 2  -- front
-                                                {0, 1, 2, 3}, // lgr_face 4 == face 3  -- back
-                                                {0, 2, 4, 6}, // lgr_face 0 == face 4  -- bottom
-                                                {4, 5, 6, 7}  // lgr_face 5 == face 5  -- top
+    // --------- this follows the order created in Geometry::refine() for LGRs in CpGrid --------
+    static const int faceVxMapLGR[ 6 ][ 4 ] = { {0, 1, 4, 5}, // lgr_face 2 == face 0  -- left
+        {2, 3, 6, 7}, // lgr_face 3 == face 1  -- right
+        {1, 3, 5, 7}, // lgr_face 1 == face 2  -- front
+        {0, 1, 2, 3}, // lgr_face 4 == face 3  -- back
+        {0, 2, 4, 6}, // lgr_face 0 == face 4  -- bottom
+        {4, 5, 6, 7}  // lgr_face 5 == face 5  -- top
     };
     const auto& elem =  Dune::cpgrid::Entity<0>(*current_view_data_, cell_index, true);
     // bool switchOrder = (elem.level() > 0) || ()
-    
+
     assert (current_view_data_->cell_to_point_[cell_index].size() == 8);
     Dune::FieldVector<double,3> center(0.0);
     for( int i=0; i<4; ++i )
     {
-        /* if ((elem.level() == 0) && (cell_to_face_[elem].size() >6))
+
+        if ((elem.level() == 0) && (current_view_data_->cell_to_face_[elem].size() > 6))
         {
-            //NEED EXACT FACE INFO, NOT ONLY TYPE  center += vertexPosition(current_view_data_->cell_to_face_[cell_index][ faceVxMap[ face ][ i ] ]);
-            }*/
-        center += vertexPosition(current_view_data_->cell_to_point_[cell_index][ elem.level() > 0 ? faceVxMapLGR[face][i] : faceVxMap[face][i] ]);
+            //center = faceCentroid(faceIdxOnLeafGridView);
+            center += vertexPosition(current_view_data_->cell_to_point_[cell_index][ faceVxMap[face][i] ]); // same center (parent one)
+        }
+        else
+        {
+
+            center += vertexPosition(current_view_data_->cell_to_point_[cell_index][ elem.level() > 0 ? faceVxMapLGR[face][i] : faceVxMap[face][i] ]);
+        }
     }
 
     for (int i=0; i<3; ++i) {
         center[i] /= 4;
     }
     return center;
-
 }
 
 const Dune::FieldVector<double,3> CpGrid::faceAreaNormalEcl(int face) const
