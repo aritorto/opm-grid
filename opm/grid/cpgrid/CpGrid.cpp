@@ -1540,10 +1540,14 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
         for (const auto& [oldCorner, newCorner] : boundary_old_to_new_corners) {
             old_to_new_boundaryPatchCorners[{0, oldCorner}] = {patch +1, newCorner};
             // (shifted) [patch +1] since coarse grid is level 0, levels/LGRs are 1,2, ..., num_patches.
+            std::cout << "old corner: " << oldCorner << " to new one: " << newCorner << std::endl;
         }
         // Populate old_to_new_boundaryPatchFaces
         for (const auto& [face, children_list] : boundary_old_to_new_faces) {
             old_to_new_boundaryPatchFaces[{0,face}] = {patch+1, children_list};
+
+            std::cout << "old face: " << face << std::endl;
+            for (const auto& child : children_list) { std::cout << " child: " << child;}
         }
     } // end-patch-forloop
     // Last patch cornes and faces.
