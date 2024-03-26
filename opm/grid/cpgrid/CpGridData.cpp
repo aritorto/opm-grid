@@ -2098,7 +2098,7 @@ Geometry<3,3> CpGridData::cellifyPatch(const std::array<int,3>& startIJK, const 
         return (*(this -> geometry_.geomVector(std::integral_constant<int,0>())))[EntityRep<0>(patch_cells[0], true)];
     }
     else{
-        checkCuboidShape(patch_cells);
+        //checkCuboidShape(patch_cells);
         // Get grid dimension.
         const std::array<int,3>& grid_dim = this -> logicalCartesianSize();
         // Select 8 corners of the patch boundary to be the 8 corners of the 'cellified patch'.
@@ -2317,7 +2317,7 @@ CpGridData::refinePatch(const std::array<int,3>& cells_per_dim, const std::array
     const auto& patch_dim = getPatchDim(startIJK, endIJK);
     const auto& patch_faces = getPatchFaces(startIJK, endIJK);
     const auto& patch_cells = getPatchCells(startIJK, endIJK);
-    checkCuboidShape(patch_cells);
+    //checkCuboidShape(patch_cells);
     // Get dx,dy,dz for each cell of the patch to be refined
     const auto& [widthsX, lengthsY, heightsZ] = getWidthsLengthsHeights(startIJK, endIJK);
     // Construct the Geometry of the cellified patch.

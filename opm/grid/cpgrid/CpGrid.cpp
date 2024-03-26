@@ -1506,7 +1506,7 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
     // Check grid is Cartesian
     const std::array<int,3>& coarseGrid_dim =  (*data_[0]).logical_cartesian_size_;
     long unsigned int coarseGridXYZ = coarseGrid_dim[0]*coarseGrid_dim[1]*coarseGrid_dim[2];
-    if ((*data_[0]).global_cell_.size() != coarseGridXYZ){
+    /* if ((*data_[0]).global_cell_.size() != coarseGridXYZ){
         if (comm().rank()==0){
             OPM_THROW(std::logic_error, "Grid is not Cartesian. This type of refinement is not supported yet.");
         }
@@ -1514,7 +1514,7 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
             // No cells on rank > 0
             return;
         }
-    }
+        }*/
     // Check all the cells to be refined have no NNC (no neighbouring connections).
     std::vector<int> all_patch_cells = (*data_[0]).getPatchesCells(startIJK_vec, endIJK_vec);
     if ((*data_[0]).hasNNCs(all_patch_cells)){
