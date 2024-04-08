@@ -1484,6 +1484,26 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
                                    const std::vector<std::array<int,3>>& endIJK_vec,
                                    const std::vector<std::string>& lgr_name_vec)
 {
+    // Check grid is Cartesian
+    const std::array<int,3>& coarseGrid_dim =  (*data_[0]).logical_cartesian_size_;
+    long unsigned int coarseGridXYZ = coarseGrid_dim[0]*coarseGrid_dim[1]*coarseGrid_dim[2];
+    if ((*data_[0]).global_cell_.size() != coarseGridXYZ){
+        if (comm().rank()==0){
+            // Check all LGRs contain only one cell to be refined
+            bool allSingleCells = true;
+            for (long unsigned int patch = 0; patch < startIJK_vec.size(); ++patch) {
+                allSingleCells = allSingleCells && ((*data_[0]).getPatchCells(startIJK_vec[patch], endIJK_vec[patch]).size() == 1);
+                if (!allSingleCells) {
+                    OPM_THROW(std::logic_error, "Grid is not Cartesian. Refine only single cells.");
+                    break;
+                }
+            }
+        }
+        else {
+            // No cells on rank > 0
+            return;
+        }
+    }
     // Check startIJK_vec and endIJK_vec have same size, and "startIJK[patch][coordinate] < endIJK[patch][coordinate]"
     (*data_[0]).validStartEndIJKs(startIJK_vec, endIJK_vec);
     if (!distributed_data_.empty()){
@@ -1503,18 +1523,6 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
             OPM_THROW_NOLOG(std::logic_error, "LGRs share at least one face.");
         }
     }
-    // Check grid is Cartesian
-    const std::array<int,3>& coarseGrid_dim =  (*data_[0]).logical_cartesian_size_;
-    long unsigned int coarseGridXYZ = coarseGrid_dim[0]*coarseGrid_dim[1]*coarseGrid_dim[2];
-    /* if ((*data_[0]).global_cell_.size() != coarseGridXYZ){
-        if (comm().rank()==0){
-            OPM_THROW(std::logic_error, "Grid is not Cartesian. This type of refinement is not supported yet.");
-        }
-        else {
-            // No cells on rank > 0
-            return;
-        }
-        }*/
     // Check all the cells to be refined have no NNC (no neighbouring connections).
     std::vector<int> all_patch_cells = (*data_[0]).getPatchesCells(startIJK_vec, endIJK_vec);
     if ((*data_[0]).hasNNCs(all_patch_cells)){
