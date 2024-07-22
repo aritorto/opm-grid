@@ -449,8 +449,10 @@ int Entity<codim>::level() const
 
 // isLeaf()
 // - if distributed_data_ is empty: an element is a leaf <-> hbegin and hend return the same iterator. Then,
-//    *cells from level 0 (coarse grid) that are not parents, are Leaf.
-//    *cells from any LGR are Leaf, since they do not children (nested refinement not supported).
+//    *cells from any level grid that are not parents, are Leaf.
+//     In this case, level_to_leaf_cells_[this->index()] has a value != -1, when there are LGRs, or "true"
+//     if the only level grid is level zero and there are no LGRs. 
+//    *cells from the leaf grid view, are Leaf. 
 // - if distrubuted_data_ is NOT empty: there may be children on a different process. Therefore,
 // isLeaf() returns true <-> the element is a leaf entity of the global refinement hierarchy. Equivalently,
 // it can be checked whether parent_to_children_cells_ is empty.
@@ -458,11 +460,16 @@ int Entity<codim>::level() const
 template<int codim>
 bool Entity<codim>::isLeaf() const
 {
-    if (pgrid_ -> parent_to_children_cells_.empty()){ // LGR cells
+    // When there are no LGRs (or distributed_data_ is not empty), level_data_ptr_ has size 1. All the entities are on the leaf grid view.
+    if ((*(pgrid_ -> level_data_ptr_)).size() == 1){
         return true;
     }
-    else {
-        return (std::get<0>((pgrid_ -> parent_to_children_cells_)[this-> index()]) == -1);  // Cells from GLOBAL, not involved in any LGR
+    // The grid of "this" Entity is literally the leaf grid view
+    if (pgrid_ == (*(pgrid_->level_data_ptr_)).back().get()) {
+        return true;
+    }
+    else { // When it is equal to -1, it means that the cell vanished (got marked for refinement and replaced by refined cells)
+        return (pgrid_-> level_to_leaf_cells_.at(this->index()) != -1);
     }
 }
 
