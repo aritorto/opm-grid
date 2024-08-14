@@ -2141,6 +2141,43 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
     int overlap_cells_per_rank = 0;
     int overlap_plus_neighbors_per_rank = 0;
     (*current_data_)[0]->cellIndexSet().beginResize();
+    auto& leaf_index_set =  (*current_data_).back()->cellIndexSet();
+    leaf_index_set.beginResize();
+    // I am unsure about the order that you are using.
+    // In our simple case we can do
+    
+    for(const auto& element : elements(leafGridView)) {
+        if(!element.hasFather())
+        {
+            leaf_index_set.add(globalIdSet().id(element),
+                               ParallelIndexSet::LocalIndex(element.index(),
+                                                            AttributeSet((element.partitionType()==InteriorEntity)? owner : overlap),
+                                                            true));
+            // Actually we should only use true here if the element is overlap or one neighber is OverlapEntity.
+        }
+        else
+        {
+            // More complicated?
+            // Determine PartitionType by the topmost parent on level 0.
+            auto origin = element.father();
+            while (origin.hasFather())
+                origin = origin.father();
+            leaf_index_set.add(globalIdSet().id(element),
+                               ParallelIndexSet::LocalIndex(element.index(),
+                                                            AttributeSet((origin.partitionType()==InteriorEntity)? owner : copy),
+                                                            true));
+        }
+    }
+    leaf_index_set.endResize();
+
+    // Now we can compute the communication interface.
+    // Here we should reuse code  from CpGridData.cpp:1637 ff.
+    // which should probably move to its own method computeCommunicationInterfaces
+    (*current_data_).back()->computeCommunicationInterfaces();
+    
+    
+    assert(leaf_index_set.size() == this->size(0));
+    (*current_data_).back()->remoteIndices().template rebuild<false>();
     for(const auto& element : elements(levelGridView(0))) {
         bool isOverlap = (element.partitionType() == OverlapEntity);
         if (isOverlap) { // Also take the neighbors into account
