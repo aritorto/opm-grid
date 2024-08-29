@@ -429,23 +429,41 @@ bool Entity<codim>::isValid() const
     return pgrid_ ?  EntityRep<codim>::index() < pgrid_->size(codim) : false;
 }
 
-
 // level() It simply returns the level of the entity in the grid hierarchy.
 template <int codim>
 int Entity<codim>::level() const
 {
-    // if distributed_data_ is not empty, level_data_ptr_ has size 1.
-    if ((*(pgrid_ -> level_data_ptr_)).size() == 1){
-        return 0; // when there is no refinenment, level_ is not automatically instantiated
-    }
-    if (pgrid_ == (*(pgrid_->level_data_ptr_)).back().get()) { // entity on the leafview -> get the level where it was born:
-        return pgrid_ -> leaf_to_level_cells_[this-> index()][0]; // leaf_to_level_cells_ leafIdx -> {level/LGR, cell index in LGR}
+    if (codim == 0)
+    {
+        // if distributed_data_ is not empty, level_data_ptr_ has size 1.
+        if ((*(pgrid_ -> level_data_ptr_)).size() == 1){
+            return 0; // when there is no refinenment, level_ is not automatically instantiated
+        }
+        if (pgrid_ == (*(pgrid_->level_data_ptr_)).back().get()) { // entity on the leafview -> get the level where it was born:
+            return pgrid_ -> leaf_to_level_cells_[this-> index()][0]; // leaf_to_level_cells_ leafIdx -> {level/LGR, cell index in LGR}
+        }
+        else {
+            return pgrid_-> level_;
+        }
     }
     else {
-        return pgrid_-> level_;
+        assert(codim == 3); // CpGrid does not support Entity<codim> with codim != 0,3.
+        // if there is no refinement, level_data_ptr_ has size equal to 1.
+        bool absenceOfLgrs = ((*(pgrid_ -> level_data_ptr_)).size() == 1);
+        bool isLevelGrid = (pgrid_->corner_history_.empty());
+        if (!absenceOfLgrs && !isLevelGrid) {  // point entity on a refined level grid or leafview -> get the level where it was born:
+            const auto& bornLevel_equivPointIdx =  pgrid_->corner_history_[this->index()];
+            // If the corner coincide with a corner from a previous level, then
+            // bornLevel_equivPointIdx = { level of the equivalent corner, equivalent corner index in that level},
+            // otherwise, bornLevel_equivPointIdx = {-1, -1} which means that the corner was born in
+            // pgrid_ ->level_ "level". 
+            return  (bornLevel_equivPointIdx[0] == -1) ? pgrid_->level_ : bornLevel_equivPointIdx[0];
+        }
+        else {
+            return 0;
+        }
     }
 }
-
 
 // isLeaf()
 // - if distributed_data_ is empty: an element is a leaf <-> hbegin and hend return the same iterator. Then,
