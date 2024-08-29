@@ -288,6 +288,9 @@ public:
     /// \brief Get equivalent element on the level grid where the entity was born, if grid = leaf-grid-view. Otherwise, return itself.
     Entity<0> getEquivLevelElem() const;
 
+    /// \brief Get equivalent point on the level grid where it was born. 
+    Entity<3> getEquivLevelPoint() const;
+
     /// \brief Get Cartesian Index in the level grid view where the Entity was born.
     int getLevelCartesianIdx() const;
 
@@ -615,6 +618,21 @@ Dune::cpgrid::Entity<0> Dune::cpgrid::Entity<codim>::getEquivLevelElem() const
     else {
         return *this;
     }
+}
+
+template<int codim>
+Dune::cpgrid::Entity<3> Dune::cpgrid::Entity<codim>::getEquivLevelPoint() const
+{
+    assert(codim == 3); // CpGrid does not support Entity<codim> with codim != 0,3.
+    if ( ! pgrid_->corner_history_.empty() ) {
+        const auto bornLevel_bornIdx =  pgrid_->corner_history_[this->index()];
+        if (bornLevel_bornIdx[0] != -1)  {
+            return Dune::cpgrid::Entity<3>(*((*(pgrid_ -> level_data_ptr_))[ bornLevel_bornIdx[0] ].get()),  bornLevel_bornIdx[1], true);
+        }
+    }
+    else {
+        return *this;
+    } 
 }
 
 template<int codim>
