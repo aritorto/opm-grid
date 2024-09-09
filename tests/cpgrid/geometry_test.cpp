@@ -394,7 +394,7 @@ void refine_and_check(const cpgrid::Geometry<3, 3>& parent_geometry,
 {
     using cpgrid::DefaultGeometryPolicy;
     CpGrid refined_grid;
-    auto& child_view_data = *refined_grid.current_view_data_;
+    auto& child_view_data = *( refined_grid.currentData().back());
     cpgrid::OrientedEntityTable<0, 1>& cell_to_face = child_view_data.cell_to_face_;
     Opm::SparseTable<int>& face_to_point = child_view_data.face_to_point_;
     DefaultGeometryPolicy& geometries = child_view_data.geometry_;
