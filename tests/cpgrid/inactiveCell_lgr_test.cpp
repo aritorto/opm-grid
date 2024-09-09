@@ -85,7 +85,7 @@ void testInactiveCellsLgrs(const std::string& deckString,
     {
         grid.addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgr_name_vec);
 
-        auto& data = grid.data_;
+        auto& data = grid.currentData();
 
         BOOST_CHECK(data.size() == startIJK_vec.size() + 2);
         BOOST_CHECK( (*data[0]).child_to_parent_cells_.empty());
