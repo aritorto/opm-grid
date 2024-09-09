@@ -157,24 +157,14 @@ void testInactiveCellsLgrs(const std::string& deckString,
                 Dune::cpgrid::Entity<0> entity = Dune::cpgrid::Entity<0>(*data[level], cell, true);
                 BOOST_CHECK( entity.hasFather() == true);
                 BOOST_CHECK( entity.getOrigin() ==  entity.father());
+                BOOST_CHECK( entity.getOrigin().index() ==  entity.father().index());
+                BOOST_CHECK( entity.getOrigin().level() ==  entity.father().level());
                 BOOST_CHECK( entity.getOrigin().level() == 0);
                 BOOST_CHECK_CLOSE(entity.geometryInFather().volume(),
                                   1./(cells_per_dim_vec[level-1][0]*cells_per_dim_vec[level-1][1]*cells_per_dim_vec[level-1][2]), 1e-6);
                 BOOST_CHECK(entity.father().level() == 0);
                 // Check entity.father() has been marked for refinement (corresponding LGR parents)
                 BOOST_CHECK_EQUAL( data[0]->getMark(entity.father()), 1);
-                const auto& child_to_parent = (*data[level]).child_to_parent_cells_[cell];
-                BOOST_CHECK_EQUAL( child_to_parent[0] == -1, false);
-                BOOST_CHECK_EQUAL( child_to_parent[0] == 0, true);
-                BOOST_CHECK_EQUAL( child_to_parent[1], entity.father().index());
-                BOOST_CHECK( std::get<0>((*data[0]).parent_to_children_cells_[child_to_parent[1]]) == entity.level());
-                BOOST_CHECK_EQUAL((std::find(std::get<1>((*data[0]).parent_to_children_cells_[child_to_parent[1]]).begin(),
-                                             std::get<1>((*data[0]).parent_to_children_cells_[child_to_parent[1]]).end(),
-                                             entity.index()) ==
-                                   std::get<1>((*data[0]).parent_to_children_cells_[child_to_parent[1]]).end()) , false);
-                // Check amount of children cells of the parent cell
-                BOOST_CHECK_EQUAL(std::get<1>((*data[0]).parent_to_children_cells_[child_to_parent[1]]).size(),
-                                  cells_per_dim_vec[level-1][0]*cells_per_dim_vec[level-1][1]*cells_per_dim_vec[level-1][2]);
                 BOOST_CHECK( entity.level() == static_cast<int>(level));
                 BOOST_CHECK( entity.isLeaf() == true);
                 auto it = entity.hbegin(grid.maxLevel());
@@ -209,7 +199,6 @@ void testInactiveCellsLgrs(const std::string& deckString,
                 {
                     BOOST_CHECK( data[startIJK_vec.size()+1] -> cell_to_face_[entity][i].index() != -1);
                 }
-                const auto& child_to_parent = (*data[startIJK_vec.size()+1]).child_to_parent_cells_[cell];
                 const auto& level_cellIdx = (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[entity.index()];
                 auto it = entity.hbegin(grid.maxLevel());
                 auto endIt = entity.hend(grid.maxLevel());
@@ -222,20 +211,8 @@ void testInactiveCellsLgrs(const std::string& deckString,
                                           *cells_per_dim_vec[entity.level()-1][2]), 1e-6);
                     BOOST_CHECK(entity.father().level() == 0);
                     BOOST_CHECK_EQUAL( data[0]->getMark(entity.father()), 1);
-                    BOOST_CHECK(child_to_parent[0] != -1);
-                    BOOST_CHECK_EQUAL( child_to_parent[0] == 0, true);
-                    BOOST_CHECK_EQUAL( child_to_parent[1], entity.father().index());
                     BOOST_CHECK( entity.father() == entity.getOrigin());
                     BOOST_CHECK( entity.getOrigin().level() == 0);
-                    BOOST_CHECK( std::get<0>((*data[0]).parent_to_children_cells_[child_to_parent[1]]) == entity.level());
-                    BOOST_CHECK_EQUAL((std::find(std::get<1>((*data[0]).parent_to_children_cells_[child_to_parent[1]]).begin(),
-                                                 std::get<1>((*data[0]).parent_to_children_cells_[child_to_parent[1]]).end(),
-                                                 level_cellIdx[1]) ==
-                                       std::get<1>((*data[0]).parent_to_children_cells_[child_to_parent[1]]).end()) , false);
-                    // Check amount of children cells of the parent cell
-                    BOOST_CHECK_EQUAL(std::get<1>((*data[0]).parent_to_children_cells_[child_to_parent[1]]).size(),
-                                      cells_per_dim_vec[entity.level()-1][0]*
-                                      cells_per_dim_vec[entity.level()-1][1]*cells_per_dim_vec[entity.level()-1][2]);
                     BOOST_CHECK( entity.father().isLeaf() == false);
                     BOOST_CHECK( (entity.level() > 0) || (entity.level() < static_cast<int>(startIJK_vec.size()) +1));
                     BOOST_CHECK( level_cellIdx[0] == entity.level());
@@ -243,11 +220,7 @@ void testInactiveCellsLgrs(const std::string& deckString,
                 else{
                     BOOST_CHECK_THROW(entity.father(), std::logic_error);
                     BOOST_CHECK_THROW(entity.geometryInFather(), std::logic_error);
-                    BOOST_CHECK_EQUAL(child_to_parent[0], -1);
-                    BOOST_CHECK_EQUAL(child_to_parent[1], -1);
                     BOOST_CHECK( level_cellIdx[0] == 0);
-                    BOOST_CHECK( std::get<0>((*data[0]).parent_to_children_cells_[level_cellIdx[1]]) == -1);
-                    BOOST_CHECK( std::get<1>((*data[0]).parent_to_children_cells_[level_cellIdx[1]]).empty());
                     BOOST_CHECK( entity.level() == 0);
                     // Get index of the cell in level 0
                     const auto& entityOldIdx =  (*data[startIJK_vec.size()+1]).leaf_to_level_cells_[entity.index()][1];
