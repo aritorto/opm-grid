@@ -93,10 +93,7 @@ void testInactiveCellsLgrs(const std::string& deckString,
 
         for (long unsigned int level = 1; level < startIJK_vec.size() +1; ++level) // only 1 when there is only 1 patch
         {
-            BOOST_CHECK( (*data[level]).parent_to_children_cells_.empty());
             BOOST_CHECK(grid.getLgrNameToLevel().at(lgr_name_vec[level-1]) == static_cast<int>(level));
-
-            const auto& patch_cells = (*data[0]).getPatchCells(startIJK_vec[level-1], endIJK_vec[level-1]);
 
             // GLOBAL grid
             for (int cell = 0; cell <  data[0]-> size(0); ++cell)
@@ -125,8 +122,6 @@ void testInactiveCellsLgrs(const std::string& deckString,
                     std::array<double,3> referenceElem_entity_center = {0.,0.,0.}; // Expected {.5,.5,.5}
                     for (const auto& child : childrenList) {
                         BOOST_CHECK( child != -1);
-                        BOOST_CHECK( data[lgr]-> child_to_parent_cells_[child][0] == 0);
-                        BOOST_CHECK( data[lgr]-> child_to_parent_cells_[child][1] == cell);
 
                         const auto& childElem =  Dune::cpgrid::Entity<0>(*data[lgr], child, true);
                         BOOST_CHECK(childElem.hasFather() == true);
@@ -147,6 +142,8 @@ void testInactiveCellsLgrs(const std::string& deckString,
                         // Do something with the son available through it->
                         BOOST_CHECK(it ->hasFather() == true);
                         BOOST_CHECK(it ->level() == lgr);
+                        BOOST_CHECK(it->father().level() == 0);
+                        BOOST_CHECK(it->father().index() == cell);
                         referenceElemOneParent_volume_it += it-> geometryInFather().volume();
                         for (int c = 0; c < 3; ++c)
                         {
@@ -285,7 +282,6 @@ void testInactiveCellsLgrs(const std::string& deckString,
         } // end-level-for-loop
 
         BOOST_CHECK( static_cast<int>(startIJK_vec.size()) == grid.maxLevel());
-        BOOST_CHECK( (*data[data.size()-1]).parent_to_children_cells_.empty());
 
         for (long unsigned int l = 0; l < startIJK_vec.size() +1; ++l) // level 0,1,2,... , last patch
         {
