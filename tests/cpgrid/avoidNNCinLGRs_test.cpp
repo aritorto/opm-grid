@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(noNNC1)
     const std::vector<std::array<int,3>> startIJK_vec = {{0,0,0}, {0,0,2}, {3,2,2}};
     const std::vector<std::array<int,3>> endIJK_vec = {{2,1,1}, {1,1,3}, {4,3,3}};
     const std::vector<std::string> lgr_name_vec = {"LGR1", "LGR2", "LGR3"};
-    Dune::CpGrid::noNNC_check(grid, cells_per_dim_vec, startIJK_vec, endIJK_vec, lgr_name_vec);
+    noNNC_check(grid, cells_per_dim_vec, startIJK_vec, endIJK_vec, lgr_name_vec);
 }
 
 BOOST_AUTO_TEST_CASE(noNNC2)
@@ -107,5 +107,5 @@ BOOST_AUTO_TEST_CASE(noNNC2)
     const std::vector<std::array<int,3>> startIJK_vec = {{0,0,0}, {3,2,0}};
     const std::vector<std::array<int,3>> endIJK_vec = {{2,2,1}, {4,3,3}};
     const std::vector<std::string> lgr_name_vec = {"LGR1", "LGR2"};
-    Dune::CpGrid::noNNC_check(grid, cells_per_dim_vec, startIJK_vec, endIJK_vec, lgr_name_vec);
+    noNNC_check(grid, cells_per_dim_vec, startIJK_vec, endIJK_vec, lgr_name_vec);
 }

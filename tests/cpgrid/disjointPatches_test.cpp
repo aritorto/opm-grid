@@ -65,7 +65,7 @@ struct Fixture
 
 BOOST_GLOBAL_FIXTURE(Fixture);
 
-void disjointPatches_check(Dune::CpGrid& grid,
+void Dune::CpGrid::disjointPatches_check(Dune::CpGrid& grid,
                            const std::vector<std::array<int,3>>& startIJK_vec,
                            const std::vector<std::array<int,3>>& endIJK_vec)
 {
