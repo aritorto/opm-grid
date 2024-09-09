@@ -75,7 +75,7 @@ BOOST_GLOBAL_FIXTURE(Fixture);
 
 void lookup_check(const Dune::CpGrid& grid)
 {
-    const auto& data = grid.data_;
+    const auto& data = grid.currentData();
 
     std::vector<int> fake_feature(data[0]->size(0), 0);
     std::iota(fake_feature.begin(), fake_feature.end(), 3);
