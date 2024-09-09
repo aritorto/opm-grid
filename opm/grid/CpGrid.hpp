@@ -87,48 +87,6 @@ namespace Dune
     }
 }
 
-void noNNC_check(Dune::CpGrid&,
-                 const std::vector<std::array<int,3>>&,
-                 const std::vector<std::array<int,3>>&,
-                 const std::vector<std::array<int,3>>&,
-                 const std::vector<std::string>&);
-
-void testCase(const std::string&,
-              const Opm::NNC&,
-              const std::vector<std::array<int,3>>&,
-              const std::vector<std::array<int,3>>&,
-              const std::vector<std::array<int,3>>&,
-              const std::vector<std::string>&,
-              bool);
-
-void testInactiveCellsLgrs(const std::string&,
-                           const std::vector<std::array<int,3>>&,
-                           const std::vector<std::array<int,3>>&,
-                           const std::vector<std::array<int,3>>&,
-                           const std::vector<std::string>&);
-
-void disjointPatches_check(Dune::CpGrid&,
-                           const std::vector<std::array<int,3>>&,
-                           const std::vector<std::array<int,3>>&);
-
-void lookup_check(const Dune::CpGrid&);
-
-void refine_and_check(const Dune::cpgrid::Geometry<3, 3>&,
-                      const std::array<int, 3>&,
-                      bool);
-
-void refinePatch_and_check(Dune::CpGrid&,
-                           const std::vector<std::array<int,3>>&,
-                           const std::vector<std::array<int,3>>&,
-                           const std::vector<std::array<int,3>>&,
-                           const std::vector<std::string>&);
-
-void refinePatch_and_check(const std::array<int,3>&,
-                           const std::array<int,3>&,
-                           const std::array<int,3>&);
-
-void check_global_refine(const Dune::CpGrid&,
-                         const Dune::CpGrid&);
 namespace Dune
 {
 
@@ -252,43 +210,43 @@ namespace Dune
         template<typename Grid, typename GridView> friend class Opm::LookUpCartesianData;
         template<int dim>
         friend cpgrid::Entity<dim> createEntity(const CpGrid&,int,bool);
-        friend void ::noNNC_check(Dune::CpGrid&,
+        friend void noNNC_check(Dune::CpGrid&,
                                   const std::vector<std::array<int,3>>&,
                                   const std::vector<std::array<int,3>>&,
                                   const std::vector<std::array<int,3>>&,
                                   const std::vector<std::string>&);
-        friend void ::testCase(const std::string&,
+        friend void testCase(const std::string&,
                                const Opm::NNC&,
                                const std::vector<std::array<int,3>>&,
                                const std::vector<std::array<int,3>>&,
                                const std::vector<std::array<int,3>>&,
                                const std::vector<std::string>&,
                                bool);
-        friend void ::testInactiveCellsLgrs(const std::string&,
+        friend void testInactiveCellsLgrs(const std::string&,
                                             const std::vector<std::array<int,3>>&,
                                             const std::vector<std::array<int,3>>&,
                                             const std::vector<std::array<int,3>>&,
                                             const std::vector<std::string>&);
-        friend void ::disjointPatches_check(Dune::CpGrid&,
+        friend void disjointPatches_check(Dune::CpGrid&,
                                             const std::vector<std::array<int,3>>&,
                                             const std::vector<std::array<int,3>>&);
-        friend void ::lookup_check(const Dune::CpGrid&);
+        friend void lookup_check(const Dune::CpGrid&);
         friend
-        void ::refine_and_check(const Dune::cpgrid::Geometry<3,3>&,
+        void refine_and_check(const Dune::cpgrid::Geometry<3,3>&,
                                 const std::array<int,3>&,
                                 bool);
         friend
-        void ::refinePatch_and_check(Dune::CpGrid&,
+        void refinePatch_and_check(Dune::CpGrid&,
                                      const std::vector<std::array<int,3>>&,
                                      const std::vector<std::array<int,3>>&,
                                      const std::vector<std::array<int,3>>&,
                                      const std::vector<std::string>&);
         friend
-        void ::refinePatch_and_check(const std::array<int,3>&,
+        void refinePatch_and_check(const std::array<int,3>&,
                                      const std::array<int,3>&,
                                      const std::array<int,3>&);
         friend
-        void ::check_global_refine(const Dune::CpGrid&,
+        void check_global_refine(const Dune::CpGrid&,
                                    const Dune::CpGrid&);
         
     public:
