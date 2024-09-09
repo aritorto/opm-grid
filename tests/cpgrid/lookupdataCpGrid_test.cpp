@@ -73,7 +73,7 @@ struct Fixture
 
 BOOST_GLOBAL_FIXTURE(Fixture);
 
-void Dune::CpGrid::lookup_check(const Dune::CpGrid& grid)
+void lookup_check(const Dune::CpGrid& grid)
 {
     const auto& data = grid.currentData();
 

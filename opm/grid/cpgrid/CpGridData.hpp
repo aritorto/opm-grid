@@ -160,6 +160,12 @@ class CpGridData
      friend void disjointPatches_check(Dune::CpGrid&,
                                             const std::vector<std::array<int,3>>&,
                                             const std::vector<std::array<int,3>>&);
+    friend void noNNC_check(Dune::CpGrid&,
+                                  const std::vector<std::array<int,3>>&,
+                                  const std::vector<std::array<int,3>>&,
+                                  const std::vector<std::array<int,3>>&,
+                                  const std::vector<std::string>&);
+   
 
 private:
     CpGridData(const CpGridData& g);
