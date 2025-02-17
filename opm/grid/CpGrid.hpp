@@ -1217,11 +1217,13 @@ namespace Dune
         /// \brief Distributes this grid over the available nodes in a distributed machine
         /// \param overlapLayers The number of layers of cells of the overlap region (default: 1).
         /// \param partitionMethod The method used to partition the grid, one of Dune::PartitionMethod
+        /// \param imbalanceTol
+        /// \param level Integer representing the level grid to be distributed. Default equal to -1 to distribute the leaf grid view. 
         /// \warning May only be called once.
-        bool loadBalance(int overlapLayers=1, int partitionMethod = Dune::PartitionMethod::zoltan, double imbalanceTol = 1.1)
+        bool loadBalance(int overlapLayers=1, int partitionMethod = Dune::PartitionMethod::zoltan, double imbalanceTol = 1.1, int level =-1)
         {
             using std::get;
-            return get<0>(scatterGrid(defaultTransEdgeWgt, false, nullptr, {}, false, nullptr, true, overlapLayers, partitionMethod, imbalanceTol));
+            return get<0>(scatterGrid(defaultTransEdgeWgt, false, nullptr, {}, false, nullptr, true, overlapLayers, partitionMethod, imbalanceTol, false, {},  level));
         }
 
         // loadbalance is not part of the grid interface therefore we skip it.
@@ -1622,7 +1624,7 @@ namespace Dune
         /// \return The index identifying a cell or -1 if there is no such
         /// cell due the face being part of the grid boundary or the
         /// cell being stored on another process.
-        int faceCell(int face, int local_index) const;
+        int faceCell(int face, int local_index, int level = -1) const;
       
         /// \brief Get the sum of all faces attached to all cells.
         ///
@@ -1891,7 +1893,8 @@ namespace Dune
                     int partitionMethod = Dune::PartitionMethod::zoltanGoG,
                     double imbalanceTol = 1.1,
                     bool allowDistributedWells = true,
-                    const std::vector<int>& input_cell_part = {});
+                    const std::vector<int>& input_cell_part = {},
+                    int level = -1);
 
         /** @brief The data stored in the grid.
          *
@@ -1991,7 +1994,7 @@ namespace Dune
 #if HAVE_MPI
         if(distributed_data_.empty())
             OPM_THROW(std::runtime_error, "Moving Data only allowed with a load balanced grid!");
-        distributed_data_[0]->scatterData(handle, data_[0].get(), distributed_data_[0].get(), cellScatterGatherInterface(),
+        distributed_data_[0]->scatterData(handle, /*currentData().back().get()*/data_[0].get(), distributed_data_[0].get(), cellScatterGatherInterface(),
                                           pointScatterGatherInterface());
 #else
         // Suppress warnings for unused argument.
@@ -2005,7 +2008,7 @@ namespace Dune
 #if HAVE_MPI
         if(distributed_data_.empty())
             OPM_THROW(std::runtime_error, "Moving Data only allowed with a load balance grid!");
-        distributed_data_[0]->gatherData(handle, data_[0].get(), distributed_data_[0].get());
+        distributed_data_[0]->gatherData(handle, /*currentData().back().get()*/data_[0].get(), distributed_data_[0].get());
 #else
         // Suppress warnings for unused argument.
         (void) handle;

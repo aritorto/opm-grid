@@ -110,7 +110,7 @@ void getCpGridNumEdgesList(void *cpGridPointer, int sizeGID, int sizeLID,
 {
     (void) globalID;
     const Dune::CpGrid&  grid = *static_cast<const Dune::CpGrid*>(cpGridPointer);
-    if ( sizeGID != 1 || sizeLID != 1 || numCells != grid.numCells() )
+    if ( sizeGID != 1 || sizeLID != 1 || numCells != grid.size(0,0) /* returns numCells in level 0 ; numCells()*/ )
     {
         *err = ZOLTAN_FATAL;
         return;

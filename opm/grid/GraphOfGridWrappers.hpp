@@ -267,7 +267,8 @@ zoltanPartitioningWithGraphOfGrid(const Dune::CpGrid& grid,
                                   Dune::EdgeWeightMethod edgeWeightMethod,
                                   int root,
                                   const double zoltanImbalanceTol,
-                                  const std::map<std::string,std::string>& params);
+                                  const std::map<std::string,std::string>& params,
+                                  int level = -1);
 
 /// \brief Make complete export lists from a vector holding destination rank for each global ID
 ///

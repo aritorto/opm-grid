@@ -88,7 +88,10 @@ namespace Dune
     void addOverlapLayer(const CpGrid& grid,
                          const std::vector<int>& cell_part,
                          std::vector<std::set<int> >& cell_overlap,
-                         int mypart, int overlapLayers, bool all=false);
+                         int mypart,
+                         int overlapLayers,
+                         bool all=false,
+                         int level = -1);
 
     /// \brief Adds a layer of overlap cells to a partitioning.
     /// \param[in] grid The grid that is partitioned.
@@ -102,11 +105,15 @@ namespace Dune
     /// \param[in] addCornerCells Switch for adding corner cells to overlap layer.
     /// \param[in] trans The transmissibilities on cell faces. When trans[i]==0, no overlap is added.
     /// \param[in] layer Number of overlap layers
-    int addOverlapLayer(const CpGrid& grid, const std::vector<int>& cell_part,
+    int addOverlapLayer(const CpGrid& grid,
+                        const std::vector<int>& cell_part,
                         std::vector<std::tuple<int,int,char>>& exportList,
                         std::vector<std::tuple<int,int,char,int>>& importList,
                         const Communication<Dune::MPIHelper::MPICommunicator>& cc,
-                        bool addCornerCells, const double* trans, int layers = 1);
+                        bool addCornerCells,
+                        const double* trans,
+                        int layers = 1,
+                        int level = -1);
 
 namespace cpgrid
 {
@@ -136,10 +143,13 @@ namespace cpgrid
                std::vector<std::tuple<int,int,char> >,
                std::vector<std::tuple<int,int,char,int> >,
                WellConnections>
-    createListsFromParts(const CpGrid& grid, const std::vector<cpgrid::OpmWellType> * wells,
-                               const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                               const double* transmissibilities, const std::vector<int>& parts,
-                               bool allowDistributedWells, std::shared_ptr<cpgrid::CombinedGridWellGraph> gridAndWells = nullptr);
+    createListsFromParts(const CpGrid& grid,
+                         const std::vector<cpgrid::OpmWellType> * wells,
+                         const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
+                         const double* transmissibilities, const std::vector<int>& parts,
+                         bool allowDistributedWells,
+                         std::shared_ptr<cpgrid::CombinedGridWellGraph> gridAndWells = nullptr,
+                         int level = -1);
 
     /// \brief Creates a vanilla partitioning without a real loadbalancer
     ///

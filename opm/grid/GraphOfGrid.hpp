@@ -53,11 +53,12 @@ class GraphOfGrid{
 
 public:
     explicit GraphOfGrid (const Grid& grid_,
+                          int level = -1,
                           const double* transmissibilities=nullptr,
                           const Dune::EdgeWeightMethod edgeWeightMethod=Dune::EdgeWeightMethod::defaultTransEdgeWgt)
         : grid(grid_)
     {
-        createGraph(transmissibilities,edgeWeightMethod);
+        createGraph(level, transmissibilities, edgeWeightMethod);
     }
 
     const Grid& getGrid() const
@@ -182,7 +183,8 @@ private:
     /// \brief Create a graph representation of the grid
     ///
     /// If transmissibilities are not supplied, edge weight=1
-    void createGraph (const double* transmissibilities=nullptr,
+    void createGraph (int level,
+                      const double* transmissibilities=nullptr,
                       const Dune::EdgeWeightMethod edgeWeightMethod=Dune::EdgeWeightMethod::defaultTransEdgeWgt);
 
     /// \brief Identify the well containing the cell with this global ID

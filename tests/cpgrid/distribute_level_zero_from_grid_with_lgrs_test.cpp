@@ -138,5 +138,7 @@ SCHEDULE
 
     auto grid = createGridAndAddTestLgr(deck_string);
 
-    grid.loadBalance();
+    // loadBalance( overlapSize, partitionMethod, imbalanceTolerance, level grid to be distributed )
+    int level = 0;
+    grid.loadBalance(1, Dune::PartitionMethod::zoltanGoG, 1.1, level);
 }

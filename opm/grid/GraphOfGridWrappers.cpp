@@ -515,7 +515,8 @@ zoltanPartitioningWithGraphOfGrid(const Dune::CpGrid& grid,
                                   Dune::EdgeWeightMethod edgeWeightMethod,
                                   int root,
                                   const double zoltanImbalanceTol,
-                                  const std::map<std::string, std::string>& params)
+                                  const std::map<std::string, std::string>& params,
+                                  int level)
 {
     float ver = 0;
     struct Zoltan_Struct *zz;
@@ -548,9 +549,9 @@ zoltanPartitioningWithGraphOfGrid(const Dune::CpGrid& grid,
 
     // prepare graph and contract well cells
     // non-root processes have empty grid and no wells
-    GraphOfGrid gog(grid, transmissibilities, edgeWeightMethod);
+    GraphOfGrid gog(grid, level, transmissibilities, edgeWeightMethod);
     assert(gog.size()==0 || !partitionIsEmpty);
-    auto wellConnections=partitionIsEmpty ? Dune::cpgrid::WellConnections()
+    auto wellConnections = (partitionIsEmpty || (wells == nullptr)) ? Dune::cpgrid::WellConnections()
                                           : Dune::cpgrid::WellConnections(*wells, possibleFutureConnections, grid);
     addWellConnections(gog, wellConnections);
     gog.addNeighboringCellsToWells(layers);
@@ -661,7 +662,7 @@ applySerialZoltan (const Dune::CpGrid& grid,
     }
 
     // prepare graph and contract well cells
-    GraphOfGrid gog(grid, transmissibilities, edgeWeightMethod);
+    GraphOfGrid gog(grid, -1, transmissibilities, edgeWeightMethod);
     addWellConnections(gog, wellConnections);
     gog.addNeighboringCellsToWells(layers);
 
