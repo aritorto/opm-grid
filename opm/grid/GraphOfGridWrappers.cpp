@@ -419,7 +419,7 @@ makeImportAndExportLists(const GraphOfGrid<Dune::CpGrid>& gog,
                          const Id* importGlobalGids)
 {
     const auto& cpgrid = gog.getGrid();
-    int size = cpgrid.numCells();
+    int size = cpgrid.currentData().front()->size(0); //cpgrid.numCells();
     int rank  = cc.rank();
     std::vector<int> gIDtoRank(size, rank);
     std::vector<std::vector<int> > wellsOnProc;
