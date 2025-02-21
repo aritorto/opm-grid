@@ -457,7 +457,7 @@ makeImportAndExportLists(const GraphOfGrid<Dune::CpGrid>& gog,
         // This also adds all well cells that were missing in the importGlobalIDs.
         for ( std::size_t i = 0; i < gIDtoRank.size(); ++i)
         {
-            if ( gIDtoRank[i] == rank )
+            if ( gIDtoRank.at(i) == rank )
             {
                 myExportList.emplace_back(i, rank, static_cast<char>(AttributeSet::owner) );
                 myImportList.emplace_back(i, rank, static_cast<char>(AttributeSet::owner), -1 );
@@ -475,6 +475,10 @@ makeImportAndExportLists(const GraphOfGrid<Dune::CpGrid>& gog,
         auto wellRanks = getWellRanks(gIDtoRank, wellConnections);
         parallel_wells = wellsOnThisRank(*wells, wellRanks, cc, root);
     }
+    
+    std::sort(myExportList.begin(), myExportList.end());
+    std::sort(myImportList.begin(), myImportList.end());
+    
     return std::make_tuple( std::move(gIDtoRank),
                             std::move(parallel_wells),
                             std::move(myExportList),
