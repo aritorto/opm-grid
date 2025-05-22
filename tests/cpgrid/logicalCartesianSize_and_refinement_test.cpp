@@ -34,6 +34,7 @@
 #define BOOST_TEST_MODULE LogicalCartesianSizeTests
 #include <boost/test/unit_test.hpp>
 
+#include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 #include <tests/cpgrid/LgrChecks.hpp>
 
 
@@ -87,6 +88,26 @@ BOOST_AUTO_TEST_CASE(lgrLogCartSize_afterAddLgrsUpdateLeafView_makesSense)
     // Block shaped parent cells of LGR2 dimensions (4-2)x(3-2)x(3-2). Number of subdivisions per cell, per direction {3,3,3}.
     areEqual( /* expected_logicalCartisianSize = */ {6,3,3}, // LGR2 dimensions {(4-2)*3, (3-2)*3, (3-2)*3}.
               /* LGR2 logicalCartesianSize = */ grid.currentData()[2]->logicalCartesianSize());
+
+
+    const Dune::CartesianIndexMapper<Dune::CpGrid> cartMapper(grid);
+    areEqual(/* expected_logicalCartisianSize = */ {4,3,3}, // level zero grid Cartesian dimensions
+             cartMapper.cartesianDimensions());
+
+    const Opm::LevelCartesianIndexMapper<Dune::CpGrid> levelCartMapp(grid);
+    areEqual( /* expected_logicalCartisianSize = */ {4,3,3}, // level zero grid Cartesian dimensions
+              levelCartMapp.cartesianDimensions(0));
+
+    // Block shaped parent cells of LGR1 dimensions (3-0)x(2-0)x(2-1). Number of subdivisions per cell, per direction {3,3,3}.
+    areEqual( /* expected_logicalCartisianSize = */  {9,6,3},  // LGR1 dimensions {(3-0)*3, (2-0)*3, (2-1)*3}.
+              /* LGR1 Cartesian dimensions = */  levelCartMapp.cartesianDimensions(1));
+
+    // Block shaped parent cells of LGR2 dimensions (4-2)x(3-2)x(3-2). Number of subdivisions per cell, per direction {3,3,3}.
+    areEqual( /* expected_logicalCartisianSize = */ {6,3,3}, // LGR2 dimensions {(4-2)*3, (3-2)*3, (3-2)*3}.
+              /* LGR2 Cartesian dimensions = */ levelCartMapp.cartesianDimensions(2));
+
+     areEqual( /* expected_logicalCartisianSize = */ {4,3,3}, // level zero grid Cartesian dimensions
+               levelCartMapp.cartesianDimensions(3)); /** This is the leaf grid view. It should throw! */
 }
 
 BOOST_AUTO_TEST_CASE(gridLogCartSize_afterStrictLocalRefinementWith_addLgrsUpdateLeafView_isACopyOfLevelZeroLogCartSize)
