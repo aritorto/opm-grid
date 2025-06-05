@@ -1,0 +1,112 @@
+\documentclass{article}
+\usepackage{ifthen}
+\usepackage{epsfig}
+\usepackage[utf8]{inputenc}
+\usepackage{xcolor}
+\usepackage{newunicodechar}
+  \makeatletter
+    \def\doxynewunicodechar#1#2{%
+    \@tempswafalse
+    \edef\nuc@tempa{\detokenize{#1}}%
+    \if\relax\nuc@tempa\relax
+      \nuc@emptyargerr
+    \else
+      \edef\@tempb{\expandafter\@car\nuc@tempa\@nil}%
+      \nuc@check
+      \if@tempswa
+        \@namedef{u8:\nuc@tempa}{#2}%
+      \fi
+    \fi
+  }
+  \makeatother
+  \doxynewunicodechar{⁻}{${}^{-}$}% Superscript minus
+  \doxynewunicodechar{²}{${}^{2}$}% Superscript two
+  \doxynewunicodechar{³}{${}^{3}$}% Superscript three
+
+\pagestyle{empty}
+\begin{document}
+$\mathit{dx}\times \mathit{dy}\times
+\mathit{dz}$
+\pagebreak
+
+$(i,j)$
+\pagebreak
+
+\[
+v_{ij} = (x_{i+1} - x_i)\cdot (y_{j+1} - y_j)
+\]
+\pagebreak
+
+$x_i$
+\pagebreak
+
+$x_{i+1}$
+\pagebreak
+
+$y_j$
+\pagebreak
+
+$y_{j+1}$
+\pagebreak
+
+$x$
+\pagebreak
+
+$y$
+\pagebreak
+
+$z$
+\pagebreak
+
+$ numCellFaces()=\sum_{c} numCellFaces(c) $
+\pagebreak
+
+$E^f = { e^f_i } $
+\pagebreak
+
+$E^t = { e^t_j }$
+\pagebreak
+
+\begin{equation*}
+R_{ij} =
+\begin{cases}
+\phantom{-} 0, &\quad \text{if } e_i^f \text{ and } e_j^f \text{ are not neighbours}, \\
+\phantom{-} 1, &\quad \text{if } e_i^f \text{ and } e_j^f \text{ are neighbours with same orientation}, \\
+-  1, &\quad \text{if } e_i^f \text{ and } e_j^f \text{ are neighbours with opposite orientation}.
+\end{cases}
+\end{equation*}
+\pagebreak
+
+\[
+t_i = \frac{\vec{n}_f \mathsf{K}_c \vec{c}_c}{\lVert \vec{c}_c \rVert^2}
+\]
+\pagebreak
+
+$\vec{c}_{cf} = \Bar{x}_f - \Bar{x}_c$
+\pagebreak
+
+\[
+\mathsf{T}_f = \big(\frac{1}{t_1} + \frac{1}{t_2}\big)^{-1}
+             = \frac{t_1t_2}{t_1 + t_2}
+\]
+\pagebreak
+
+$t_1$
+\pagebreak
+
+$t_2$
+\pagebreak
+
+\[
+\mathsf{T}_f = \big(\frac{1}{\lambda_1t_1} + \frac{1}{\lambda_2t_2}\big)^{-1}
+             = \lambda_1\lambda_2 \frac{t_1t_2}{t_1 + t_2}
+\]
+\pagebreak
+
+$\lambda_1$
+\pagebreak
+
+$\lambda_2$
+\pagebreak
+
+\end{document}

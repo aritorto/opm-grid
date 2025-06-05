@@ -1,0 +1,10 @@
+digraph "Opm::UgGridHelpers::Face2VerticesTraits&lt; Dune::PolyhedralGrid&lt; dim, dimworld &gt; &gt;"
+{
+ // LATEX_PDF_SIZE
+  bgcolor="transparent";
+  edge [fontname=Helvetica,fontsize=10,labelfontname=Helvetica,labelfontsize=10];
+  node [fontname=Helvetica,fontsize=10,shape=box,height=0.2,width=0.4];
+  Node1 [id="Node000001",label="Opm::UgGridHelpers\l::Face2VerticesTraits\l\< Dune::PolyhedralGrid\l\< dim, dimworld \> \>",height=0.2,width=0.4,color="gray40", fillcolor="grey60", style="filled", fontcolor="black",tooltip=" "];
+  Node2 -> Node1 [id="edge1_Node000001_Node000002",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node2 [id="Node000002",label="Opm::UgGridHelpers\l::Face2VerticesTraits\l\< UnstructuredGrid \>",height=0.2,width=0.4,color="gray40", fillcolor="white", style="filled",URL="$structOpm_1_1UgGridHelpers_1_1Face2VerticesTraits_3_01UnstructuredGrid_01_4.html",tooltip=" "];
+}

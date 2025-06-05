@@ -1,0 +1,8 @@
+var searchData=
+[
+  ['r_0',['r',['../classDune_1_1cpgrid_1_1OrientedEntityRange.html#add0ca7fe9b2f9a06e8fd6620dfa1d22e',1,'Dune::cpgrid::OrientedEntityRange::R'],['../classDune_1_1cpgrid_1_1MutableOrientedEntityRange.html#aa05197a20af9a724305a967e037ce1c0',1,'Dune::cpgrid::MutableOrientedEntityRange::R']]],
+  ['range_1',['Range',['../classOpm_1_1RegionMapping.html#a7a2c8ba907241258ce5512ad8b24cd9d',1,'Opm::RegionMapping']]],
+  ['reference_2',['reference',['../classDune_1_1cpgrid_1_1Iterator.html#a887a3fc6f200f77771f7b912865f75ea',1,'Dune::cpgrid::Iterator::Reference'],['../classDune_1_1cpgrid_1_1HierarchicIterator.html#a561a68ffaf3b30c3de6afe1cb374b9ca',1,'Dune::cpgrid::HierarchicIterator::Reference']]],
+  ['regionid_3',['RegionId',['../classOpm_1_1RegionMapping.html#ac0756f1a088bdc476038f5063d6427c5',1,'Opm::RegionMapping']]],
+  ['row_5ftype_4',['row_type',['../classDune_1_1cpgrid_1_1FaceCellsContainerProxy.html#af31e36757589001508d1ff25909f244d',1,'Dune::cpgrid::FaceCellsContainerProxy::row_type'],['../classDune_1_1cpgrid_1_1LocalIndexContainerProxy.html#aa8c908b9f0677d5ba1a7cce4bc526e70',1,'Dune::cpgrid::LocalIndexContainerProxy::row_type'],['../classDune_1_1cpgrid_1_1Cell2FacesContainer.html#a64101818f3832050e3a3ec6f78518f3a',1,'Dune::cpgrid::Cell2FacesContainer::row_type'],['../classDune_1_1cpgrid_1_1OrientedEntityTable.html#ad5ec55ef4d9158c0f48879f5baf9dcaf',1,'Dune::cpgrid::OrientedEntityTable::row_type'],['../classOpm_1_1UgGridHelpers_1_1SparseTableView.html#a780f9716c19488eecb04891028f41237',1,'Opm::UgGridHelpers::SparseTableView::row_type'],['../classOpm_1_1SparseTable.html#a6938cd7fb4aa43e648548370493fc1b5',1,'Opm::SparseTable::row_type']]]
+];
