@@ -1,0 +1,12 @@
+<map id="opm/grid/common/ZoltanPartition.hpp" name="opm/grid/common/ZoltanPartition.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="431,5,701,31"/>
+<area shape="rect" id="Node000002" href="$GraphOfGridWrappers_8cpp.html" title=" " alt="" coords="5,79,260,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="484,35,203,81,202,76,483,30"/>
+<area shape="rect" id="Node000003" href="$GridPartitioning_8cpp.html" title=" " alt="" coords="284,79,557,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="532,39,446,81,443,76,529,34"/>
+<area shape="rect" id="Node000004" href="$MetisPartition_8hpp.html" title=" " alt="" coords="581,79,844,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="603,34,690,76,688,81,600,39"/>
+<area shape="rect" id="Node000005" href="$CpGrid_8cpp.html" title=" " alt="" coords="697,152,896,177"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="715,30,802,48,836,61,859,77,864,88,865,99,855,120,837,139,817,154,814,150,833,135,851,117,860,98,859,89,855,80,834,65,801,53,714,35"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="738,111,785,150,781,154,735,115"/>
+</map>

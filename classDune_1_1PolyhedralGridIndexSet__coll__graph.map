@@ -1,0 +1,9 @@
+<map id="Dune::PolyhedralGridIndexSet&lt; dim, dimworld, coord_t &gt;" name="Dune::PolyhedralGridIndexSet&lt; dim, dimworld, coord_t &gt;">
+<area shape="rect" id="Node000001" title=" " alt="" coords="552,59,775,99"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="224,5,467,75"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="481,54,552,62,551,68,480,59"/>
+<area shape="rect" id="Node000003" href="$classDune_1_1PolyhedralGrid.html" title="identical grid wrapper" alt="" coords="244,99,447,139"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="460,102,551,90,552,95,461,107"/>
+<area shape="rect" id="Node000004" href="$structUnstructuredGrid.html" title=" " alt="" coords="5,106,139,131"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="153,116,244,116,244,121,153,121"/>
+</map>

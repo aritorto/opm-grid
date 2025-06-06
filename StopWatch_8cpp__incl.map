@@ -1,0 +1,9 @@
+<map id="opm/grid/utility/StopWatch.cpp" name="opm/grid/utility/StopWatch.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="128,5,351,31"/>
+<area shape="rect" id="Node000002" href="$StopWatch_8hpp.html" title=" " alt="" coords="5,79,228,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="221,33,150,74,147,69,218,28"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="252,79,475,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="261,28,333,69,330,74,258,33"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="83,152,150,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="119,104,119,138,114,138,114,104"/>
+</map>

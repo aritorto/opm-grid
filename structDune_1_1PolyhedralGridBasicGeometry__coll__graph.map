@@ -1,0 +1,7 @@
+<map id="Dune::PolyhedralGridBasicGeometry&lt; mydim, cdim, Grid &gt;" name="Dune::PolyhedralGridBasicGeometry&lt; mydim, cdim, Grid &gt;">
+<area shape="rect" id="Node000001" title=" " alt="" coords="649,20,888,60"/>
+<area shape="rect" id="Node000002" href="$structDune_1_1PolyhedralGridBasicGeometry_1_1PolyhedralMultiLinearGeometryTraits.html" title=" " alt="" coords="257,5,540,75"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="554,37,649,37,649,43,554,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,20,208,60"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="222,37,257,37,257,43,222,43"/>
+</map>

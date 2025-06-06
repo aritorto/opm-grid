@@ -1,0 +1,35 @@
+<map id="opm/grid/common/WellConnections.hpp" name="opm/grid/common/WellConnections.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="516,5,797,31"/>
+<area shape="rect" id="Node000002" href="$GraphOfGridWrappers_8hpp.html" title=" " alt="" coords="5,167,260,192"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="556,35,456,54,351,81,294,102,239,126,155,169,152,164,237,121,292,97,349,76,454,49,555,30"/>
+<area shape="rect" id="Node000005" href="$GridPartitioning_8hpp.html" title=" " alt="" coords="758,167,1033,192"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="679,39,720,77,770,116,820,144,866,164,864,169,817,149,767,121,716,81,676,43"/>
+<area shape="rect" id="Node000007" href="$MetisPartition_8hpp.html" title=" " alt="" coords="501,240,764,265"/>
+<area shape="poly" id="edge10_Node000001_Node000007" title=" " alt="" coords="658,45,645,192,637,240,632,240,639,192,652,44"/>
+<area shape="rect" id="Node000009" href="$WellConnections_8cpp.html" title=" " alt="" coords="781,86,1061,111"/>
+<area shape="poly" id="edge11_Node000001_Node000009" title=" " alt="" coords="709,32,883,83,881,89,707,37"/>
+<area shape="rect" id="Node000010" href="$ZoltanGraphFunctions_8hpp.html" title=" " alt="" coords="362,79,589,119"/>
+<area shape="poly" id="edge12_Node000001_Node000010" title=" " alt="" coords="619,39,520,81,518,76,617,34"/>
+<area shape="rect" id="Node000011" href="$ZoltanPartition_8hpp.html" title=" " alt="" coords="335,167,605,192"/>
+<area shape="poly" id="edge22_Node000001_Node000011" title=" " alt="" coords="651,45,632,83,602,121,558,150,513,169,511,164,556,146,599,117,627,80,646,42"/>
+<area shape="rect" id="Node000003" href="$GraphOfGridWrappers_8cpp.html" title=" " alt="" coords="171,240,425,265"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="173,195,272,237,270,242,171,200"/>
+<area shape="rect" id="Node000004" href="$CpGrid_8cpp.html" title=" " alt="" coords="448,313,647,339"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="136,206,143,237,150,251,160,263,180,276,208,286,281,302,366,313,448,319,447,324,366,318,280,308,206,291,177,280,156,267,145,254,138,238,131,207"/>
+<area shape="poly" id="edge8_Node000005_Node000004" title=" " alt="" coords="992,192,1034,203,1068,219,1079,229,1085,240,1085,253,1076,267,1055,279,1016,289,905,305,771,316,647,323,647,318,771,311,904,299,1015,284,1053,274,1072,263,1080,252,1080,241,1075,232,1065,223,1032,209,990,197"/>
+<area shape="rect" id="Node000006" href="$GridPartitioning_8cpp.html" title=" " alt="" coords="788,240,1061,265"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="908,204,922,239,917,241,903,206"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="841,198,676,242,675,237,839,193"/>
+<area shape="rect" id="Node000008" href="$CpGridData_8cpp.html" title=" " alt="" coords="1137,240,1368,265"/>
+<area shape="poly" id="edge9_Node000005_Node000008" title=" " alt="" coords="967,192,1195,237,1194,243,966,197"/>
+<area shape="poly" id="edge7_Node000007_Node000004" title=" " alt="" coords="610,276,563,315,560,311,607,272"/>
+<area shape="poly" id="edge14_Node000010_Node000002" title=" " alt="" coords="380,124,183,169,182,164,379,119"/>
+<area shape="poly" id="edge13_Node000010_Node000003" title=" " alt="" coords="388,126,354,144,325,168,314,186,307,205,301,240,296,239,302,204,309,183,321,165,351,140,385,121"/>
+<area shape="poly" id="edge15_Node000010_Node000005" title=" " alt="" coords="590,119,834,164,833,169,589,124"/>
+<area shape="poly" id="edge16_Node000010_Node000007" title=" " alt="" coords="561,122,592,140,619,165,629,184,634,204,636,239,631,240,629,205,624,186,615,168,589,144,558,126"/>
+<area shape="poly" id="edge17_Node000010_Node000011" title=" " alt="" coords="476,133,473,166,468,166,470,132"/>
+<area shape="poly" id="edge18_Node000011_Node000003" title=" " alt="" coords="431,200,327,242,325,237,429,195"/>
+<area shape="poly" id="edge21_Node000011_Node000004" title=" " alt="" coords="474,205,480,235,491,264,511,291,534,311,530,315,507,294,486,267,475,236,469,206"/>
+<area shape="poly" id="edge19_Node000011_Node000006" title=" " alt="" coords="557,191,852,237,851,243,556,197"/>
+<area shape="poly" id="edge20_Node000011_Node000007" title=" " alt="" coords="510,195,607,237,605,242,508,200"/>
+</map>

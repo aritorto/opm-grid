@@ -1,0 +1,5 @@
+<map id="Dune::cpgrid::PointViaCellWarner" name="Dune::cpgrid::PointViaCellWarner">
+<area shape="rect" id="Node000001" title=" " alt="" coords="9,5,200,45"/>
+<area shape="rect" id="Node000002" href="$structDune_1_1cpgrid_1_1PointViaCellHandleWrapper.html" title="A data handle to send data attached to points via cell communication." alt="" coords="5,93,204,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="107,59,107,93,102,93,102,59"/>
+</map>

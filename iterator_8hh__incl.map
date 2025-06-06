@@ -1,0 +1,13 @@
+<map id="opm/grid/polyhedralgrid/iterator.hh" name="opm/grid/polyhedralgrid/iterator.hh">
+<area shape="rect" id="Node000001" title=" " alt="" coords="335,5,514,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,101,273,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="363,48,191,99,189,94,361,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="298,101,551,126"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="427,46,427,87,422,87,422,46"/>
+<area shape="rect" id="Node000004" href="$entitypointer_8hh.html" title=" " alt="" coords="575,93,754,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="478,43,600,86,599,91,476,48"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="463,189,656,214"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="643,136,586,182,583,178,640,132"/>
+<area shape="rect" id="Node000006" href="$declaration_8hh.html" title=" " alt="" coords="681,181,859,221"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="690,132,738,171,735,175,686,136"/>
+</map>

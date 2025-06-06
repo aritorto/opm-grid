@@ -1,0 +1,9 @@
+<map id="opm/grid/polyhedralgrid/intersection.hh" name="opm/grid/polyhedralgrid/intersection.hh">
+<area shape="rect" id="Node000001" title=" " alt="" coords="213,5,392,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,101,189,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="259,48,138,98,136,93,257,43"/>
+<area shape="rect" id="Node000003" href="$declaration_8hh.html" title=" " alt="" coords="213,93,392,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="305,46,305,79,300,79,300,46"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="417,101,487,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="337,43,422,92,419,96,334,48"/>
+</map>

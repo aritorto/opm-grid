@@ -1,0 +1,7 @@
+<map id="Dune::PolyhedralGridView&lt; dim, dimworld, coord_t, defaultpitype &gt;" name="Dune::PolyhedralGridView&lt; dim, dimworld, coord_t, defaultpitype &gt;">
+<area shape="rect" id="Node000001" title=" " alt="" coords="11,196,203,251"/>
+<area shape="rect" id="Node000002" href="$classDune_1_1PolyhedralGrid.html" title="identical grid wrapper" alt="" coords="5,93,208,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="109,147,109,196,104,196,104,147"/>
+<area shape="rect" id="Node000003" href="$structUnstructuredGrid.html" title=" " alt="" coords="40,5,173,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="109,44,109,93,104,93,104,44"/>
+</map>
