@@ -294,7 +294,7 @@ std::vector<double> Opm::LookUpData<Grid,GridView>::assignFieldPropsDoubleOnLeaf
     std::vector<double> fieldPropOnLeaf;
     unsigned int numElements = gridView_.size(0);
     fieldPropOnLeaf.resize(numElements);
-    const auto& fieldProp = fieldPropsManager.get_double(propString);
+    const auto& fieldProp = fieldPropsManager.get_global_double(propString); 
     if ( (propString == "PORV") && (gridView_.grid().maxLevel() > 0)) {
         // PORV poreVolume. LGRs supported (so far) only for CpGrid.
         // For CpGrid with LGRs, poreVolume of a cell on the leaf grid view which has a parent cell on level 0,
@@ -302,6 +302,7 @@ std::vector<double> Opm::LookUpData<Grid,GridView>::assignFieldPropsDoubleOnLeaf
         // volume of a parent cell coincides with the sum of the pore volume of its children.
         for (const auto& element : elements(gridView_)) {
             const auto& elemIdx = this-> elemMapper_.index(element);
+            // NEED GLOBAL ID !!!!!!!!!!!
             const auto& fieldPropIdx = this->getFieldPropIdx<Grid>(elemIdx); // gets parentIdx (or (lgr)levelIdx) for CpGrid with LGRs
             if (element.hasFather()) {
                 const auto fatherVolume = element.father().geometry().volume();
@@ -333,7 +334,7 @@ std::vector<IntType> Opm::LookUpData<Grid,GridView>::assignFieldPropsIntOnLeaf(c
     std::vector<IntType> fieldPropOnLeaf;
     unsigned int numElements = gridView_.size(0);
     fieldPropOnLeaf.resize(numElements);
-    const auto& fieldProp = fieldPropsManager.get_int(propString);
+    const auto& fieldProp = fieldPropsManager.get_global_int(propString);
     for (const auto& element : elements(gridView_)) {
         const auto& elemIdx = this-> elemMapper_.index(element);
         const auto& fieldPropIdx = this->getFieldPropIdx(elemIdx); // gets parentIdx (or (lgr)levelIdx) for CpGrid with LGRs
@@ -349,7 +350,7 @@ double Opm::LookUpData<Grid,GridView>::fieldPropDouble(const FieldPropsManager& 
                                                        const std::string& propString,
                                                        const ElemOrIndex& elemOrIndex) const
 {
-    const auto& fieldPropVec = fieldPropsManager.get_double(propString);
+    const auto& fieldPropVec = fieldPropsManager.get_global_double(propString);
     return this ->operator()(elemOrIndex,fieldPropVec);
 }
 
@@ -380,19 +381,25 @@ auto Opm::LookUpData<Grid,GridView>::getFieldPropIdx(const IndexType& elementOrI
             const auto& elem = Dune::cpgrid::Entity<0>(*(gridView_.grid().currentData().back()), elementOrIndex, true);
             if (isFieldPropInLgr_ && elem.level()) { // level > 0 == true ; level == 0 == false
                 // In case some LGRs do not have refined field properties, the next line need to be modified.
+                // CHECK HERE
                 return elem.getLevelElem().index();
             }
             else {
-                return elem.getOrigin().index();
+                int tmp = gridView_.grid().currentData().front()->globalIdSet().id(elem.getOrigin());
+                return tmp;
+                  //  return elem.getOrigin().index();
             }
         } else {
             static_assert(std::is_same_v<IndexType, Dune::cpgrid::Entity<0>>);
             if (isFieldPropInLgr_ && elementOrIndex.level()) { // level > 0 == true ; level == 0 == false
                 // In case some LGRs do not have refined field properties, the next line need to be modified.
+                // check HERE
                 return elementOrIndex.getLevelElem().index();
             }
             else {
-                return elementOrIndex.getOrigin().index();
+                int tmp = gridView_.grid().currentData().front()->globalIdSet().id(elementOrIndex.getOrigin());
+                    return tmp;
+                  //  return elementOrIndex.getOrigin().index();
             }
         }
     } else {
@@ -429,7 +436,7 @@ std::vector<double> Opm::LookUpCartesianData<Grid,GridView>::assignFieldPropsDou
     std::vector<double> fieldPropOnLeaf;
     unsigned int numElements = gridView_.size(0);
     fieldPropOnLeaf.resize(numElements);
-    const auto& fieldProp = fieldPropsManager.get_double(propString);
+    const auto& fieldProp = fieldPropsManager.get_global_double(propString);
     for (unsigned int elemIdx = 0; elemIdx < numElements; ++elemIdx) {
         const auto fieldPropCartIdx = this->getFieldPropCartesianIdx<Grid>(elemIdx);
         fieldPropOnLeaf[elemIdx] = fieldProp[fieldPropCartIdx];
@@ -447,7 +454,7 @@ std::vector<IntType> Opm::LookUpCartesianData<Grid,GridView>::assignFieldPropsIn
     std::vector<IntType> fieldPropOnLeaf;
     unsigned int numElements = gridView_.size(0);
     fieldPropOnLeaf.resize(numElements);
-    const auto& fieldProp = fieldPropsManager.get_int(propString);
+    const auto& fieldProp = fieldPropsManager.get_global_int(propString);
     for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
         const auto fieldPropCartIdx = this->getFieldPropCartesianIdx<Grid>(elemIdx);
         fieldPropOnLeaf[elemIdx] = fieldProp[fieldPropCartIdx] - needsTranslation;
@@ -462,7 +469,7 @@ double Opm::LookUpCartesianData<Grid,GridView>::fieldPropDouble(const FieldProps
                                                                 const std::string& propString,
                                                                 const ElemOrIndex& elemOrIndex) const
 {
-    const auto& fieldPropVec = fieldPropsManager.get_double(propString);
+    const auto& fieldPropVec = fieldPropsManager.get_global_double(propString);
     return this ->operator()(elemOrIndex,fieldPropVec);
 }
 
@@ -472,7 +479,7 @@ int Opm::LookUpCartesianData<Grid,GridView>::fieldPropInt(const FieldPropsManage
                                                           const std::string& propString,
                                                           const ElemOrIndex& elemOrIndex) const
 {
-    const auto& fieldPropVec = fieldPropsManager.get_int(propString);
+    const auto& fieldPropVec = fieldPropsManager.get_global_int(propString);
     return this ->operator()(elemOrIndex,fieldPropVec);
 }
 
