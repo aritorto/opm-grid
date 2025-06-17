@@ -2738,6 +2738,16 @@ void CpGrid::syncDistributedGlobalCellIds()
     populateLeafGlobalIdSet();
     this->global_id_set_ptr_->insertIdSet(*currentData().back());
 
+    for (int level = 1; level <= maxLevel; ++level) {
+        if(currentData()[level]->size(0)) { // Check if LGR is active in currect process.
+            // Now we can compute the communication interface.
+            currentData()[level]->computeCommunicationInterfaces(currentData()[level]->size(3));
+        }
+    }
+    // Now we can compute the communication interface.
+    current_data_->back()->computeCommunicationInterfaces(current_data_->back()->size(3));
+
+    //  current_data_->back()->computeCommunicationInterfaces(current_data_->back()->size(3));
     assert(static_cast<std::size_t>(current_data_->back()->cellIndexSet().size()) == static_cast<std::size_t>(current_data_->back()->size(0)) );
 #endif
 }
