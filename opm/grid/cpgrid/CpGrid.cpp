@@ -1452,9 +1452,9 @@ void CpGrid::selectWinnerPointIds([[maybe_unused]] std::vector<std::vector<int>>
     for (std::size_t level = 1; level < cells_per_dim_vec.size()+1; ++level) {
 
         level_cell_to_point[level -1] = currentData()[level]->cell_to_point_;
-        // Set std::numeric_limits<int>::max() to make sure that, during communication, the rank of the interior cell
-        // wins (int between 0 and comm().size()).
-        level_winning_ranks[level-1].resize(currentData()[level]->size(3), std::numeric_limits<int>::max());
+        // Set comm().size() to make sure that, during communication, the rank of the interior cell
+        // wins (int between 0 and comm().size()). (The smallest wins).
+        level_winning_ranks[level-1].resize(currentData()[level]->size(3), comm().size());
 
         for (const auto& element : elements(levelGridView(level))) {
             // For interior cells, rewrite the rank value - later used in "point global id competition".
