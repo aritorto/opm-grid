@@ -30,10 +30,11 @@
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/output/data/Solution.hpp>
 
+#include <dune/grid/common/mcmgmapper.hh>
+
 #include <array>
-#include <numeric>
-#include <string>  // for std::iota
-#include <utility> // for std::move
+#include <string>
+#include <utility>  // for std::move
 #include <vector>
 
 struct Fixture
@@ -49,15 +50,25 @@ struct Fixture
 
 BOOST_GLOBAL_FIXTURE(Fixture);
 
-void restrictFakeLeafDataToLevelGrids(const Dune::CpGrid& grid)
+void restrictFakeLeafDataToLevelGrids(const Dune::CpGrid& grid,
+                                      const std::vector<std::vector<double>>& expected_data_levels)
 {
     // Create a fake leaf solution
     Opm::data::Solution leafSolution{};
     BOOST_CHECK(!leafSolution.has("NOTHING")); // dummy check
 
+    const auto& leafView = grid.leafGridView();
+
+    using LeafMapper = Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LeafGridView>;
+    const LeafMapper leafMapper(leafView, Dune::mcmgElementLayout());
+
     std::vector<double> leafVec{};
-    leafVec.resize(grid.leafGridView().size(0));
-    std::iota(leafVec.begin(), leafVec.end(), 0);  // fills with 0, 1, 2, ..., total amount of leaf cells -1
+    leafVec.resize(leafView.size(0));
+    for (const auto& element : Dune::elements(leafView)) {
+        leafVec[leafMapper.index(element)] = element.hasFather()? 1 : 0;
+    }
+    // leafVec is a vector of 0's and 1's.
+    // Set 1 for those cells that have a father, 0 otherwise.
 
     leafSolution.insert("FAKEPROP",
                         Opm::UnitSystem::measure::liquid_surface_volume, // just one possible meassure
@@ -67,24 +78,39 @@ void restrictFakeLeafDataToLevelGrids(const Dune::CpGrid& grid)
     BOOST_CHECK(leafSolution.has("FAKEPROP"));
 
     const auto& leafFakePropData = leafSolution.data<double>("FAKEPROP");
-    BOOST_CHECK_EQUAL(leafFakePropData.size(), grid.leafGridView().size(0));
+    BOOST_CHECK_EQUAL(leafFakePropData.size(), leafView.size(0));
+
+    int maxLevel = grid.maxLevel();
 
     // To restrict/create the level cell data, based on the leaf cells and the hierarchy
     std::vector<Opm::data::Solution> levelSolutions{};
-    levelSolutions.resize(grid.maxLevel()+1);
+    levelSolutions.resize(maxLevel+1);
 
+    using LevelMapper = Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LevelGridView>;
     for (const auto& leaf_data : leafSolution)
     {
         std::vector<std::vector<double>> aux_levels_data{};
-        aux_levels_data.resize(grid.maxLevel()+1);
+        aux_levels_data.resize(maxLevel+1);
+
+        std::vector<LevelMapper> levelMappers{};
+        levelMappers.reserve(maxLevel+1);
 
         for (int level = 0; level <=grid.maxLevel(); ++level) {
             aux_levels_data[level].resize(grid.levelGridView(level).size(0));
+            levelMappers.push_back(LevelMapper{grid.levelGridView(level), Dune::mcmgElementLayout()});
         }
 
         // For level cells that appear in the leaf, extract the data value from leaf_data
-        for (const auto& element : Dune::elements(grid.leafGridView())) {
-            aux_levels_data[element.level()][element.getLevelElem().index()] = leaf_data.second.data<double>()[element.index()];
+        for (const auto& element : Dune::elements(leafView)) {
+
+            int elemLevel = element.level();
+            const auto& equivalentLevelElement = element.getLevelElem();
+            /** Entity::getLevelElem() Not DUNE interface.
+                Alternative: use map CpGridData leaf_to_level_cells_
+                leaf_to_level_cells_[ leaf_cell_idx ] = {level (cell parent grid index), cell index in that level} */
+
+            aux_levels_data[elemLevel][levelMappers[elemLevel].index(equivalentLevelElement)] =
+                leaf_data.second.data<double>()[leafMapper.index(element)];
         }
 
         // For the level cells that vanished (don't make it to the leaf), compute avarage of children data values
@@ -93,11 +119,11 @@ void restrictFakeLeafDataToLevelGrids(const Dune::CpGrid& grid)
                 if (element.isLeaf()) // entry already populated
                     continue;
 
-                auto it = element.hbegin(level);
-                const auto& endIt = element.hend(level);
+                auto it = element.hbegin(level+1);
+                const auto& endIt = element.hend(level+1);
 
                 int child_count = 0;
-    
+
                 for (; it != endIt; ++it) {
                     aux_levels_data[level][element.index()] += aux_levels_data[it->level()][it->index()];
                     ++child_count;
@@ -125,6 +151,8 @@ void restrictFakeLeafDataToLevelGrids(const Dune::CpGrid& grid)
 
             const auto& levelFakePropData = levelSolutions[level].data<double>("FAKEPROP");
             BOOST_CHECK_EQUAL(levelFakePropData.size(), grid.levelGridView(level).size(0));
+            BOOST_CHECK_EQUAL_COLLECTIONS(levelFakePropData.begin(), levelFakePropData.end(),
+                                          expected_data_levels[level].begin(), expected_data_levels[level].end());
         }
     }
 }
@@ -152,7 +180,24 @@ BOOST_AUTO_TEST_CASE(restrictDataForNonNestedLgrsSharingEdges)
                                /* endIJK_vec = */ {{3,2,3}, {3,3,1}},
                                /* lgr_name_vec = */ {"LGR1", "LGR2"});
 
-    restrictFakeLeafDataToLevelGrids(grid);
+    std::vector<std::vector<double>> expected_data_levels{};
+    expected_data_levels.resize(grid.maxLevel()+1);
+
+    // Expected data for level grids is 1 for parent and children cells, 0 otherwise.
+
+    // level 0 data vector size 36, with all entries 0 except for parent cells (1)
+    expected_data_levels[0] = std::vector<double>(36,0);
+    for (const auto& idx : std::vector<int>{9,10,13,14,17,18,25,26,29,30}) {
+        expected_data_levels[0][idx] = 1;
+    }
+
+    // level 1 data vector of 1's, size 64 (cells_per_dim = {2,2,2}, block parent cells dim = {2,2,2})
+    expected_data_levels[1] = std::vector<double>(64,1);
+
+    // level 2 data vector of 1's, size 24 (cells_per_dim = {2,3,2}, block parent cells dim = {2,1,1})
+    expected_data_levels[2] = std::vector<double>(24,1);
+
+    restrictFakeLeafDataToLevelGrids(grid, expected_data_levels);
 }
 
 
@@ -182,7 +227,28 @@ BOOST_AUTO_TEST_CASE(restrictDataForNestedRefinementOnly) {
                                lgr_name_vec,
                                lgr_parent_grid_name_vec);
 
-    restrictFakeLeafDataToLevelGrids(grid);
+    std::vector<std::vector<double>> expected_data_levels{};
+    expected_data_levels.resize(grid.maxLevel()+1);
+
+    // Expected data for level grids is 1 for parent and children cells, 0 otherwise.
+
+    // level 0 data vector size 36, with all entries 0 except for parent cells (1)
+    expected_data_levels[0] = std::vector<double>(9,0);
+    expected_data_levels[0][4] = 1; // parent index LGR1 = {4}
+
+    // level 1 data vector of 1's, size 12 (cells_per_dim = {3,2,2}, block parent cells dim = {1,1,1})
+    expected_data_levels[1] = std::vector<double>(12,1);
+
+    // level 2 data vector of 1's, size 8 (cells_per_dim = {2,2,2}, block parent cells dim = {1,1,1})
+    expected_data_levels[2] = std::vector<double>(8,1);
+
+    // level 3 data vector of 1's, size 4 (cells_per_dim = {2,2,1}, block parent cells dim = {1,1,1})
+    expected_data_levels[3] = std::vector<double>(4,1);
+
+    // level 4 data vector of 1's, size 24 (cells_per_dim = {3,4,2}, block parent cells dim = {1,1,1})
+    expected_data_levels[4] = std::vector<double>(24,1);
+
+    restrictFakeLeafDataToLevelGrids(grid, expected_data_levels);
 }
 
 BOOST_AUTO_TEST_CASE(restrictDataForMixNameOrderAndNestedRefinement){
@@ -207,5 +273,31 @@ BOOST_AUTO_TEST_CASE(restrictDataForMixNameOrderAndNestedRefinement){
                                lgr_name_vec,
                                lgr_parent_grid_name_vec);
 
-    restrictFakeLeafDataToLevelGrids(grid);
+    std::vector<std::vector<double>> expected_data_levels{};
+    expected_data_levels.resize(grid.maxLevel()+1);
+
+    // Expected data for level grids is 1 for parent and children cells, 0 otherwise.
+    
+    // level 0 data vector size 36, with all entries 0 except for parent cells (1)
+    expected_data_levels[0] = std::vector<double>(9,0);
+    expected_data_levels[0][4] = 1; // parent index LGR1 = {4}
+    expected_data_levels[0][0] = 1; // parent index LGR3 = {0}
+    /** level 1 contains LGR1, whose parent grid is GLOBAL
+        level 2 contains LGR3, whose parent grid is GLOBAL
+        level 3 contains LGR2, whose parent grid is LGR1
+        level 4 contains LGR4, whose parent grid is LGR3   */
+
+    // level 1 (LGR1) data vector of 1's, size 12 (cells_per_dim = {3,2,2}, block parent cells dim = {1,1,1})
+    expected_data_levels[1] = std::vector<double>(12,1);
+
+    // level 2 (LGR3) data vector of 1's, size 4 (cells_per_dim = {2,2,1}, block parent cells dim = {1,1,1})
+    expected_data_levels[2] = std::vector<double>(4,1);
+
+    // level 3 (LGR2) data vector of 1's, size 8 (cells_per_dim = {2,2,2}, block parent cells dim = {1,1,1})
+    expected_data_levels[3] = std::vector<double>(8,1);
+
+    // level 4 (LGR4) data vector of 1's, size 24 (cells_per_dim = {3,4,2}, block parent cells dim = {1,1,1})
+    expected_data_levels[4] = std::vector<double>(24,1);
+
+    restrictFakeLeafDataToLevelGrids(grid, expected_data_levels);
 }
