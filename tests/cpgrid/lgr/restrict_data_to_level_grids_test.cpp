@@ -34,6 +34,7 @@
 
 #include <array>
 #include <string>
+#include <tuple>
 #include <utility>  // for std::move
 #include <vector>
 
@@ -49,6 +50,191 @@ struct Fixture
 };
 
 BOOST_GLOBAL_FIXTURE(Fixture);
+
+template <typename Scalar, int numPhases> 
+std::vector<Opm::data::Solution> restrictScalarBufferToLevelGrids(const Dune::CpGrid& grid,
+                                                                  const Opm::data::Solution& leafSolution,
+                                                                  int gasPhaseIdx,
+                                                                  int oilPhaseIdx,
+                                                                  int waterPhaseIdx)
+{
+    using DataEntry = std::tuple<std::string, Opm::UnitSystem::measure, std::vector<Scalar>&>;
+
+    using ScalarBuffer = std::vector<Scalar>;
+
+    // if index not specified, we treat it as valid (>= 0)
+    auto addEntryIf = [&](std::vector<std::vector<DataEntry>>& container_levels,
+                          const std::string& name,
+                          Opm::UnitSystem::measure measure,
+                          ScalarBuffer& flowArray_level, int level, int index = 1) 
+    {
+        assert(container_levels.size() == grid.maxLevel()+1);
+
+        if (index >= 0 &&  leafSolution.has(name)) {  // Only add if index is valid
+
+            const auto& leaf_data = leafSolution.template data<Scalar>(name);
+
+            flowArray_level.resize(grid.levelGridView(level).size(0));
+
+            // For level cells that appear in the leaf, extract the data value from leaf_data
+            for (const auto& element : Dune::elements(grid.leafGridView())) {
+                if (element.level() == level) {
+                    flowArray_level[element.getLevelElem().index()] = leaf_data.second.template data<Scalar>()[element.index()];
+                }
+            }
+            // Reorder the containers in the order expected by outout files (increasing level Cartesian indices)
+            const Opm::LevelCartesianIndexMapper<Dune::CpGrid> levelCartMapp(grid);
+            const auto toOutput = Opm::Lgr::mapLevelIndicesToCartesianOutputOrder(grid, levelCartMapp, level);
+            const auto outputContainer = Opm::Lgr::reorderForOutput( flowArray_level,
+                                                                     toOutput);
+
+            container_levels[level].emplace_back(name, measure, outputContainer);
+        }
+    };
+
+
+    int maxLevel = grid.maxLevel();
+
+    // To restrict/create the level cell data, based on the leaf cells and the hierarchy
+    std::vector<Opm::data::Solution> levelSolutions{};
+    levelSolutions.resize(maxLevel+1);
+
+    std::vector<std::vector<DataEntry>> baseSolutionVector_levels{};
+    baseSolutionVector_levels.resize(maxLevel+1);
+
+    for (int level = 0; level <= maxLevel; ++level) {
+
+        ScalarBuffer gasFormationVolumeFactor_level{};
+        ScalarBuffer hydrocarbonPoreVolume_level{};
+        ScalarBuffer pressureTimesPoreVolume_level{};
+        ScalarBuffer pressureTimesHydrocarbonVolume_level{};
+        ScalarBuffer dynamicPoreVolume_level{};
+        ScalarBuffer rPorV_level{};
+        ScalarBuffer fluidPressure_level{};
+        ScalarBuffer temperature_level{};
+        ScalarBuffer rs_level{};
+        ScalarBuffer rsw_level{};
+        ScalarBuffer rv_level{};
+        ScalarBuffer rvw_level{};
+        ScalarBuffer overburdenPressure_level{};
+        ScalarBuffer oilSaturationPressure_level{};
+        ScalarBuffer drsdtcon_level{};
+        ScalarBuffer sSol_level{};
+        ScalarBuffer rswSol_level{};
+        ScalarBuffer cPolymer_level{};
+        ScalarBuffer cFoam_level{};
+        ScalarBuffer cSalt_level{};
+        ScalarBuffer pSalt_level{};
+        ScalarBuffer permFact_level{};
+        ScalarBuffer soMax_level{};
+        ScalarBuffer swMax_level{};
+        ScalarBuffer sgmax_level{};
+        ScalarBuffer shmax_level{};
+        ScalarBuffer somin_level{};
+        ScalarBuffer swmin_level{};
+        ScalarBuffer ppcw_level{};
+        ScalarBuffer gasDissolutionFactor_level{};
+        ScalarBuffer oilVaporizationFactor_level{};
+        ScalarBuffer gasDissolutionFactorInWater_level{};
+        ScalarBuffer waterVaporizationFactor_level{};
+        ScalarBuffer bubblePointPressure_level{};
+        ScalarBuffer dewPointPressure_level{};
+        ScalarBuffer rockCompPorvMultiplier_level{};
+        ScalarBuffer minimumOilPressure_level{};
+        ScalarBuffer saturatedOilFormationVolumeFactor_level{};
+        ScalarBuffer rockCompTransMultiplier_level{};
+        ScalarBuffer pcgw_level{};
+        ScalarBuffer pcow_level{};
+        ScalarBuffer pcog_level{};
+
+        std::array<ScalarBuffer, numPhases> saturation_level{};
+        std::array<ScalarBuffer, numPhases> invB_level{};
+        std::array<ScalarBuffer, numPhases> density_level{};
+        std::array<ScalarBuffer, numPhases> viscosity_level{};
+        std::array<ScalarBuffer, numPhases> relativePermeability_level{};
+
+        addEntryIf(baseSolutionVector_levels, "1OVERBG",  Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,   invB_level[gasPhaseIdx], level, gasPhaseIdx);
+        addEntryIf(baseSolutionVector_levels, "1OVERBO",  Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,   invB_level[oilPhaseIdx], level, oilPhaseIdx);
+
+        // avoid output with generic fluid system and disabled water phase
+        if constexpr (numPhases > 2) {
+            addEntryIf(baseSolutionVector_levels, "1OVERBW", Opm::UnitSystem::measure::water_inverse_formation_volume_factor, invB_level[waterPhaseIdx], level, waterPhaseIdx);
+        }
+        addEntryIf(baseSolutionVector_levels, "FOAM",     Opm::UnitSystem::measure::identity,                              cFoam_level, level);
+        addEntryIf(baseSolutionVector_levels, "GASKR",    Opm::UnitSystem::measure::identity,                              relativePermeability_level[gasPhaseIdx], level, gasPhaseIdx);
+        addEntryIf(baseSolutionVector_levels, "GAS_DEN",  Opm::UnitSystem::measure::density,                               density_level[gasPhaseIdx], level, gasPhaseIdx);
+        addEntryIf(baseSolutionVector_levels, "GAS_VISC", Opm::UnitSystem::measure::viscosity,                             viscosity_level[gasPhaseIdx], level, gasPhaseIdx);
+        addEntryIf(baseSolutionVector_levels, "OILKR",    Opm::UnitSystem::measure::identity,                              relativePermeability_level[oilPhaseIdx], level, oilPhaseIdx);
+        addEntryIf(baseSolutionVector_levels, "OIL_DEN",  Opm::UnitSystem::measure::density,                               density_level[oilPhaseIdx], level, oilPhaseIdx);
+        addEntryIf(baseSolutionVector_levels, "OIL_VISC", Opm::UnitSystem::measure::viscosity,                             viscosity_level[oilPhaseIdx], level, oilPhaseIdx);
+        addEntryIf(baseSolutionVector_levels, "PBUB",     Opm::UnitSystem::measure::pressure,                              bubblePointPressure_level, level);
+        addEntryIf(baseSolutionVector_levels, "PCGW",     Opm::UnitSystem::measure::pressure,                              pcgw_level, level);
+        addEntryIf(baseSolutionVector_levels, "PCOG",     Opm::UnitSystem::measure::pressure,                              pcog_level, level);
+        addEntryIf(baseSolutionVector_levels, "PCOW",     Opm::UnitSystem::measure::pressure,                              pcow_level, level);
+        addEntryIf(baseSolutionVector_levels, "PDEW",     Opm::UnitSystem::measure::pressure,                              dewPointPressure_level, level);
+        addEntryIf(baseSolutionVector_levels, "POLYMER",  Opm::UnitSystem::measure::identity,                              cPolymer_level, level);
+        addEntryIf(baseSolutionVector_levels, "PPCW",     Opm::UnitSystem::measure::pressure,                              ppcw_level, level);
+        addEntryIf(baseSolutionVector_levels, "PRESROCC", Opm::UnitSystem::measure::pressure,                              minimumOilPressure_level, level);
+        addEntryIf(baseSolutionVector_levels, "PRESSURE", Opm::UnitSystem::measure::pressure,                              fluidPressure_level, level);
+        addEntryIf(baseSolutionVector_levels, "RPORV",    Opm::UnitSystem::measure::volume,                                rPorV_level, level);
+        addEntryIf(baseSolutionVector_levels, "RS",       Opm::UnitSystem::measure::gas_oil_ratio,                         rs_level, level);
+        addEntryIf(baseSolutionVector_levels, "RSSAT",    Opm::UnitSystem::measure::gas_oil_ratio,                         gasDissolutionFactor_level, level);
+        addEntryIf(baseSolutionVector_levels, "RV",       Opm::UnitSystem::measure::oil_gas_ratio,                         rv_level, level);
+        addEntryIf(baseSolutionVector_levels, "RVSAT",    Opm::UnitSystem::measure::oil_gas_ratio,                         oilVaporizationFactor_level, level);
+        addEntryIf(baseSolutionVector_levels, "SALT",     Opm::UnitSystem::measure::concentration,                         cSalt_level, level);
+        addEntryIf(baseSolutionVector_levels, "SGMAX",    Opm::UnitSystem::measure::identity,                              sgmax_level, level);
+        addEntryIf(baseSolutionVector_levels, "SHMAX",    Opm::UnitSystem::measure::identity,                              shmax_level, level);
+        addEntryIf(baseSolutionVector_levels, "SOMAX",    Opm::UnitSystem::measure::identity,                              soMax_level, level);
+        addEntryIf(baseSolutionVector_levels, "SOMIN",    Opm::UnitSystem::measure::identity,                              somin_level, level);
+        addEntryIf(baseSolutionVector_levels, "SSOLVENT", Opm::UnitSystem::measure::identity,                              sSol_level, level);
+        addEntryIf(baseSolutionVector_levels, "SWHY1",    Opm::UnitSystem::measure::identity,                              swmin_level, level);
+        addEntryIf(baseSolutionVector_levels, "SWMAX",    Opm::UnitSystem::measure::identity,                              swMax_level, level);
+
+        // avoid output with generic fluid system and disabled water phase
+        if constexpr (numPhases > 2) {
+            addEntryIf(baseSolutionVector_levels, "WATKR",    Opm::UnitSystem::measure::identity,                          relativePermeability_level[waterPhaseIdx], level, waterPhaseIdx);
+            addEntryIf(baseSolutionVector_levels, "WAT_DEN",  Opm::UnitSystem::measure::density,                           density_level[waterPhaseIdx], level, waterPhaseIdx);
+            addEntryIf(baseSolutionVector_levels, "WAT_VISC", Opm::UnitSystem::measure::viscosity,                         viscosity_level[waterPhaseIdx], level, waterPhaseIdx);
+        }
+
+        /* auto extendedSolutionArrays = std::array {
+            DataEntry{"DRSDTCON", Opm::UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_level},
+            DataEntry{"PERMFACT", Opm::UnitSystem::measure::identity,           permFact_level},
+            DataEntry{"PORV_RC",  Opm::UnitSystem::measure::identity,           rockCompPorvMultiplier_level},
+            DataEntry{"PRES_OVB", Opm::UnitSystem::measure::pressure,           overburdenPressure_level},
+            DataEntry{"RSW",      Opm::UnitSystem::measure::gas_oil_ratio,      rsw_level},
+            DataEntry{"RSWSAT",   Opm::UnitSystem::measure::gas_oil_ratio,      gasDissolutionFactorInWater_level},
+            DataEntry{"RSWSOL",   Opm::UnitSystem::measure::gas_oil_ratio,      rswSol_level},
+            DataEntry{"RVW",      Opm::UnitSystem::measure::oil_gas_ratio,      rvw_level},
+            DataEntry{"RVWSAT",   Opm::UnitSystem::measure::oil_gas_ratio,      waterVaporizationFactor_level},
+            DataEntry{"SALTP",    Opm::UnitSystem::measure::identity,           pSalt_level},
+            DataEntry{"TMULT_RC", Opm::UnitSystem::measure::identity,           rockCompTransMultiplier_level},
+            };*/
+
+        auto doInsert = [&levelSolutions, &level](DataEntry&       entry,
+                                                  const Opm::data::TargetType target)
+        {
+            if (std::get<2>(entry).empty()) {
+                return;
+            }
+
+            levelSolutions[level].insert(std::get<std::string>(entry),
+                                         std::get<Opm::UnitSystem::measure>(entry),
+                                         std::move(std::get<2>(entry)),
+                                         target);
+        };
+
+        for (auto& array : baseSolutionVector_levels[level]) {
+            doInsert(array, Opm::data::TargetType::RESTART_SOLUTION, level);
+        }
+    }
+    return levelSolutions;
+}
+
+
+// BioeffectsContainer<Scalar> bioeffectsC_;
+// ExtboContainer<Scalar> extboC_;
+
 
 void restrictFakeLeafDataToLevelGrids(const Dune::CpGrid& grid,
                                       const std::vector<std::vector<double>>& expected_data_levels)
