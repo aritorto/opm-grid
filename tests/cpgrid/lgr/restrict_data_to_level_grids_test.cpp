@@ -27,6 +27,7 @@
 #include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 #include <opm/grid/cpgrid/LgrHelpers.hpp>
 
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/output/data/Solution.hpp>
 
@@ -51,22 +52,30 @@ struct Fixture
 
 BOOST_GLOBAL_FIXTURE(Fixture);
 
-template <typename Scalar, int numPhases> 
+template <typename Scalar, int numPhases>
 std::vector<Opm::data::Solution> restrictScalarBufferToLevelGrids(const Dune::CpGrid& grid,
                                                                   const Opm::data::Solution& leafSolution,
                                                                   int gasPhaseIdx,
                                                                   int oilPhaseIdx,
-                                                                  int waterPhaseIdx)
+                                                                  int waterPhaseIdx,
+                                                                  std::array<bool,3> phaseIsActive,
+                                                                  const std::vector<Scalar>& leafTemperature,
+                                                                  const std::array<std::vector<Scalar>, numPhases>& leafSaturation,
+                                                                  const std::array<std::vector<Scalar>, numPhases>& leafResidual,
+                                                                  bool enableFlores, // postpone this? Comp-> compositional
+                                                                  bool enableFlows,
+                                                                  int gasCompIdx, 
+                                                                  int oilCompIdx,
+                                                                  int waterCompIdx)
 {
     using DataEntry = std::tuple<std::string, Opm::UnitSystem::measure, std::vector<Scalar>&>;
-
     using ScalarBuffer = std::vector<Scalar>;
 
     // if index not specified, we treat it as valid (>= 0)
     auto addEntryIf = [&](std::vector<std::vector<DataEntry>>& container_levels,
                           const std::string& name,
                           Opm::UnitSystem::measure measure,
-                          ScalarBuffer& flowArray_level, int level, int index = 1) 
+                          ScalarBuffer& flowArray_level, int level, int index = 1)
     {
         assert(container_levels.size() == grid.maxLevel()+1);
 
@@ -93,6 +102,39 @@ std::vector<Opm::data::Solution> restrictScalarBufferToLevelGrids(const Dune::Cp
     };
 
 
+    using OtherDataEntry = std::tuple<std::string, Opm::UnitSystem::measure, std::array<ScalarBuffer,6>&>;
+    // if index not specified, we treat it as valid (>= 0)
+    auto addOtherEntryIf = [&](std::vector<std::vector<OtherDataEntry>>& entries_levels,
+                               const std::string& name,
+                               Opm::UnitSystem::measure measure,
+                               ScalarBuffer& flowArray_level, int level, int index)
+    {
+        assert(entries_levels.size() == grid.maxLevel()+1);
+
+        if (index >= 0 &&  leafSolution.has(name)) {  // Only add if index is valid
+
+            const auto& leaf_data = leafSolution.template data<Scalar>(name);
+
+            flowArray_level.resize(grid.levelGridView(level).size(0));
+
+            // For level cells that appear in the leaf, extract the data value from leaf_data
+            for (const auto& element : Dune::elements(grid.leafGridView())) {
+                if (element.level() == level) {
+                    flowArray_level[element.getLevelElem().index()] = leaf_data.second.template data<Scalar>()[element.index()];
+                }
+            }
+            // Reorder the containers in the order expected by outout files (increasing level Cartesian indices)
+            const Opm::LevelCartesianIndexMapper<Dune::CpGrid> levelCartMapp(grid);
+            const auto toOutput = Opm::Lgr::mapLevelIndicesToCartesianOutputOrder(grid, levelCartMapp, level);
+            const auto outputContainer = Opm::Lgr::reorderForOutput( flowArray_level,
+                                                                     toOutput);
+
+            entries_levels[level].emplace_back(name, measure, outputContainer);
+        }
+    };
+
+
+
     int maxLevel = grid.maxLevel();
 
     // To restrict/create the level cell data, based on the leaf cells and the hierarchy
@@ -101,6 +143,9 @@ std::vector<Opm::data::Solution> restrictScalarBufferToLevelGrids(const Dune::Cp
 
     std::vector<std::vector<DataEntry>> baseSolutionVector_levels{};
     baseSolutionVector_levels.resize(maxLevel+1);
+
+    std::vector<std::vector<OtherDataEntry>> entries_levels{};
+    entries_levels.resize(maxLevel+1);
 
     for (int level = 0; level <= maxLevel; ++level) {
 
@@ -197,20 +242,6 @@ std::vector<Opm::data::Solution> restrictScalarBufferToLevelGrids(const Dune::Cp
             addEntryIf(baseSolutionVector_levels, "WAT_VISC", Opm::UnitSystem::measure::viscosity,                         viscosity_level[waterPhaseIdx], level, waterPhaseIdx);
         }
 
-        /* auto extendedSolutionArrays = std::array {
-            DataEntry{"DRSDTCON", Opm::UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_level},
-            DataEntry{"PERMFACT", Opm::UnitSystem::measure::identity,           permFact_level},
-            DataEntry{"PORV_RC",  Opm::UnitSystem::measure::identity,           rockCompPorvMultiplier_level},
-            DataEntry{"PRES_OVB", Opm::UnitSystem::measure::pressure,           overburdenPressure_level},
-            DataEntry{"RSW",      Opm::UnitSystem::measure::gas_oil_ratio,      rsw_level},
-            DataEntry{"RSWSAT",   Opm::UnitSystem::measure::gas_oil_ratio,      gasDissolutionFactorInWater_level},
-            DataEntry{"RSWSOL",   Opm::UnitSystem::measure::gas_oil_ratio,      rswSol_level},
-            DataEntry{"RVW",      Opm::UnitSystem::measure::oil_gas_ratio,      rvw_level},
-            DataEntry{"RVWSAT",   Opm::UnitSystem::measure::oil_gas_ratio,      waterVaporizationFactor_level},
-            DataEntry{"SALTP",    Opm::UnitSystem::measure::identity,           pSalt_level},
-            DataEntry{"TMULT_RC", Opm::UnitSystem::measure::identity,           rockCompTransMultiplier_level},
-            };*/
-
         auto doInsert = [&levelSolutions, &level](DataEntry&       entry,
                                                   const Opm::data::TargetType target)
         {
@@ -227,13 +258,134 @@ std::vector<Opm::data::Solution> restrictScalarBufferToLevelGrids(const Dune::Cp
         for (auto& array : baseSolutionVector_levels[level]) {
             doInsert(array, Opm::data::TargetType::RESTART_SOLUTION, level);
         }
+
+        auto extendedSolutionArrays = std::array {
+            DataEntry{"DRSDTCON", Opm::UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_level},
+            DataEntry{"PERMFACT", Opm::UnitSystem::measure::identity,           permFact_level},
+            DataEntry{"PORV_RC",  Opm::UnitSystem::measure::identity,           rockCompPorvMultiplier_level},
+            DataEntry{"PRES_OVB", Opm::UnitSystem::measure::pressure,           overburdenPressure_level},
+            DataEntry{"RSW",      Opm::UnitSystem::measure::gas_oil_ratio,      rsw_level},
+            DataEntry{"RSWSAT",   Opm::UnitSystem::measure::gas_oil_ratio,      gasDissolutionFactorInWater_level},
+            DataEntry{"RSWSOL",   Opm::UnitSystem::measure::gas_oil_ratio,      rswSol_level},
+            DataEntry{"RVW",      Opm::UnitSystem::measure::oil_gas_ratio,      rvw_level},
+            DataEntry{"RVWSAT",   Opm::UnitSystem::measure::oil_gas_ratio,      waterVaporizationFactor_level},
+            DataEntry{"SALTP",    Opm::UnitSystem::measure::identity,           pSalt_level},
+            DataEntry{"TMULT_RC", Opm::UnitSystem::measure::identity,           rockCompTransMultiplier_level},
+        };
+    
+        for (auto& array : extendedSolutionArrays) {
+            doInsert(array, Opm::data::TargetType::RESTART_OPM_EXTENDED);
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////////
+        // begin-How to replace "this->flowsC_.outputRestart(sol);" (GenericOutputBlackoil)
+        std::array<std::array<ScalarBuffer, 6>, numPhases> flores_level{};
+        std::array<std::array<ScalarBuffer, 6>, numPhases> flows_level{};
+
+        if (enableFlores) {
+            addOtherEntryIf(entries_levels, "FLRGAS", Opm::UnitSystem::measure::rate,                flores_level[gasCompIdx], level, gasCompIdx);
+            addOtherEntryIf(entries_levels, "FLROIL", Opm::UnitSystem::measure::rate,                flores_level[oilCompIdx], level, oilCompIdx);
+            addOtherEntryIf(entries_levels, "FLRWAT", Opm::UnitSystem::measure::rate,                flores_level[waterCompIdx], level, waterCompIdx);
+        }
+        if (enableFlows) {
+            addOtherEntryIf(entries_levels, "FLOGAS", Opm::UnitSystem::measure::gas_surface_rate,    flows_level[gasCompIdx], level, gasCompIdx);
+            addOtherEntryIf(entries_levels, "FLOOIL", Opm::UnitSystem::measure::liquid_surface_rate, flows_level[oilCompIdx], level, oilCompIdx);
+            addOtherEntryIf(entries_levels, "FLOWAT", Opm::UnitSystem::measure::liquid_surface_rate, flows_level[waterCompIdx], level, waterCompIdx);
+        }
+        
+        auto doInsertOther = [&levelSolutions, &level](ScalarBuffer& value,
+                                                       const std::string& name,
+                                                       Opm::UnitSystem::measure measure)
+        {
+            if (!value.empty()) {
+
+                levelSolutions[level].insert(name,
+                                             measure,
+                                             std::move(value),
+                                             Opm::data::TargetType::RESTART_SOLUTION);
+            }
+        };
+
+        using Dir = Opm::FaceDir::DirEnum;
+        std::for_each(entries_levels[level].begin(), entries_levels[level].end(),
+                      [&doInsertOther](auto& array)
+                      {
+                          static const auto dirs = std::array{
+                              std::pair{Opm::FaceDir::ToIntersectionIndex(Dir::XMinus), "I-"},
+                              std::pair{Opm::FaceDir::ToIntersectionIndex(Dir::XPlus), "I+"},
+                              std::pair{Opm::FaceDir::ToIntersectionIndex(Dir::YMinus), "J-"},
+                              std::pair{Opm::FaceDir::ToIntersectionIndex(Dir::YPlus), "J+"},
+                              std::pair{Opm::FaceDir::ToIntersectionIndex(Dir::ZMinus), "K-"},
+                              std::pair{Opm::FaceDir::ToIntersectionIndex(Dir::ZPlus), "K+"},
+                          };
+                          const auto& name = std::get<0>(array);
+                          const auto& measure = std::get<1>(array);
+                          auto& value = std::get<2>(array);
+                          for (const auto& [index, postfix] : dirs) {
+                              doInsertOther(value[index], name + postfix, measure);
+                          }
+                      });
+        // end-How to replace "this->flowC_.outputRestart(sol)" HAVEN'T INSERTED IN LEVEL SOLUTION YET!!!
+        
+
+
+        // To do: for level grids,
+        // BioeffectsContainer<Scalar> bioeffectsC_;
+        // bioeffectsC_.outputRestart(sol, !FluidSystem::phaseIsActive(gasPhaseIdx)); 
+        //
+        // mech_.outputRestart(sol);
+        //
+        // ExtboContainer<Scalar> extboC_;
+        // extboC_.outputRestart(sol);
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        if (!leafTemperature.empty()) {
+            // restrict and insert in levelSolutions[level]
+            // levelSolutions[level].insert("TEMP", Opm::UnitSystem::measure::temperature, std::move(temperature_level), data::TargetType::RESTART_SOLUTION);
+        }
+
+        if (phaseIsActive[waterPhaseIdx] && !leafSaturation[waterPhaseIdx].empty()) {
+            // restrict and insert in levelSolutions[level]
+            //sol.insert("SWAT", Opm::UnitSystem::measure::identity,
+            //         std::move(this->saturation_[waterPhaseIdx]),
+            //         data::TargetType::RESTART_SOLUTION);
+        }
+
+        if (phaseIsActive[gasPhaseIdx] && !leafSaturation[gasPhaseIdx].empty())
+        {  // restrict and insert in levelSolutions[level]
+            //  sol.insert("SGAS", UnitSystem::measure::identity,
+            //         std::move(this->saturation_[gasPhaseIdx]),
+            //         data::TargetType::RESTART_SOLUTION);
+        }
+    
+        if (phaseIsActive[waterPhaseIdx] && !leafResidual[waterPhaseIdx].empty())
+        {
+            // sol.insert("RES_WAT", UnitSystem::measure::liquid_surface_volume,
+            //          std::move(this->residual_[waterPhaseIdx]),
+            //           data::TargetType::RESTART_OPM_EXTENDED);
+        }
+        if (phaseIsActive[gasPhaseIdx] && !leafResidual[gasPhaseIdx].empty())
+        {
+            // sol.insert("RES_GAS", UnitSystem::measure::gas_surface_volume,
+            //            std::move(this->residual_[gasPhaseIdx]),
+            //           data::TargetType::RESTART_OPM_EXTENDED);
+        }
+        if (phaseIsActive[oilPhaseIdx] && !leafResidual[oilPhaseIdx].empty())
+        {
+            //    sol.insert("RES_OIL", UnitSystem::measure::liquid_surface_volume,
+            //         std::move(this->residual_[oilPhaseIdx]),
+            //         data::TargetType::RESTART_OPM_EXTENDED);
+        }
+
+        // Fluid in place
+        // this->fipC_.outputRestart(sol);
+
+        // Tracers
+        // this->tracerC_.outputRestart(sol, eclState_.tracer());
     }
     return levelSolutions;
 }
 
-
-// BioeffectsContainer<Scalar> bioeffectsC_;
-// ExtboContainer<Scalar> extboC_;
 
 
 void restrictFakeLeafDataToLevelGrids(const Dune::CpGrid& grid,
