@@ -124,7 +124,6 @@ Container Opm::Lgr::reorderForOutput(const Container& simulatorContainer,
     return outputContainer;
 }
 
-
 template <typename Grid>
 void Opm::Lgr::extractRestartValueLevelGrids(const Grid& grid,
                                              const Opm::RestartValue& leafRestartValue,
