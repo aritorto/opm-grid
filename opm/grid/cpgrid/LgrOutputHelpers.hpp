@@ -24,11 +24,7 @@
 #include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
-//#include <opm/output/data/Aquifer.hpp>
-//#include <opm/output/data/Cells.hpp>
-//#include <opm/output/data/Groups.hpp>
 #include <opm/output/data/Solution.hpp>
-//#include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
 #include <cstddef>      // for std::size_t
@@ -102,6 +98,15 @@ template <typename Grid>
 void extractRestartValueLevelGrids(const Grid& grid,
                                    const Opm::RestartValue& leafRestartValue,
                                    std::vector<Opm::RestartValue>& restartValue_levels);
+
+
+std::vector<std::vector<int>> ifLeafGetLevelIndexToLeafIndex(const Dune::CpGrid& grid);
+
+std::vector<std::array<int,2>> ifVanishedGetDescendantsPresentOnLeaf(const Dune::cpgrid::Entity<0>& element,
+                                                                     int maxLevel);
+
+std::vector<std::vector<std::vector<int>>> getDescendantsPresentOnLeaf(const Dune::CpGrid& grid);
+
 
 } // namespace Lgr
 } // namespace Opm
