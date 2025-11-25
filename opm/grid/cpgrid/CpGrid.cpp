@@ -170,9 +170,9 @@ CpGrid::CpGrid()
       point_scatter_gather_interfaces_(new InterfaceMap, FreeInterfaces{}),
       global_id_set_ptr_()
 {
-    data_.push_back(std::make_shared<cpgrid::CpGridData>(data_));
+    data_->push_back(cpgrid::CpGridData(data_));
     current_data_ = &data_;
-    global_id_set_ptr_ = std::make_shared<cpgrid::GlobalIdSet>(*(current_data_->back()));
+    global_id_set_ptr_ = std::make_shared<cpgrid::GlobalIdSet>(current_data_->back());
 }
 
 CpGrid::CpGrid(MPIHelper::MPICommunicator comm)
@@ -181,9 +181,9 @@ CpGrid::CpGrid(MPIHelper::MPICommunicator comm)
       point_scatter_gather_interfaces_(new InterfaceMap, FreeInterfaces{}),
       global_id_set_ptr_()
 {
-    data_.push_back(std::make_shared<cpgrid::CpGridData>(comm, data_));
+    data_->push_back(cpgrid::CpGridData(comm, data_));
     current_data_ = &data_;
-    global_id_set_ptr_ = std::make_shared<cpgrid::GlobalIdSet>(*(current_data_->back()));
+    global_id_set_ptr_ = std::make_shared<cpgrid::GlobalIdSet>(current_data_->back());
 }
 
 std::vector<int>
@@ -660,14 +660,14 @@ const std::array<int, 3>& CpGrid::logicalCartesianSize() const
     return current_data_->back() -> logical_cartesian_size_;
 }
 
-const std::vector<std::shared_ptr<Dune::cpgrid::CpGridData>>& CpGrid::currentData() const
+const std::shared_ptr<std::vector<Dune::cpgrid::CpGridData>>& CpGrid::currentData() const
 {
-    return *current_data_;
+    return std::make_shared(*current_data_);
 }
 
-std::vector<std::shared_ptr<Dune::cpgrid::CpGridData>>& CpGrid::currentData()
+std::shared_ptr<std::vector<Dune::cpgrid::CpGridData>>& CpGrid::currentData()
 {
-    return *current_data_;
+    return std::make_shared(*current_data_);
 }
 const Dune::cpgrid::CpGridData& CpGrid::currentLeafData() const
 {

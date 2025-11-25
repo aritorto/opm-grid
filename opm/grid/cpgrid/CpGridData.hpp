@@ -156,12 +156,12 @@ public:
     /// \param comm The MPI communicator
     /// \param data Pointer to existing data to use
     /// Default constructor.
-    explicit CpGridData(MPIHelper::MPICommunicator comm,  std::vector<std::shared_ptr<CpGridData>>& data);
+    explicit CpGridData(MPIHelper::MPICommunicator comm, std::shared_ptr<std::vector<CpGridData>>& data);
 
 
 
     /// Constructor
-    explicit CpGridData(std::vector<std::shared_ptr<CpGridData>>& data);
+    explicit CpGridData(std::shared_ptr<std::vector<CpGridData>>& data);
     /// Destructor
     ~CpGridData();
 
@@ -815,7 +815,7 @@ private:
     /** Level of the current CpGridData (0 when it's "GLOBAL", 1,2,.. for LGRs). */
     int level_{0};
     /** Copy of (CpGrid object).data_ associated with the CpGridData object. */
-    std::vector<std::shared_ptr<CpGridData>>* level_data_ptr_;
+    std::shared_ptr<td::vector<CpGridData>> level_data_ptr_;
     // SUITABLE FOR ALL LEVELS EXCEPT FOR LEAFVIEW
     /** Map between level and leafview cell indices. Only cells (from that level) that appear in leafview count. -1 when the cell vanished.*/
     std::vector<int> level_to_leaf_cells_; // In entry 'level cell index', we store 'leafview cell index'

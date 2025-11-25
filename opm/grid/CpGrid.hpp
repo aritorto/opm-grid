@@ -371,10 +371,10 @@ namespace Dune
         const std::vector<int>& globalCell() const;
 
         /// @brief Returns either data_ or distributed_data_(if non empty).
-        const std::vector<std::shared_ptr<Dune::cpgrid::CpGridData>>& currentData() const;
+        const std::shared_ptr<std::vector<Dune::cpgrid::CpGridData>>& currentData() const;
 
         /// @brief Returns either data_ or distributed_data_(if non empty).
-        std::vector<std::shared_ptr<Dune::cpgrid::CpGridData>>& currentData();
+        std::shared_ptr<std::vector<Dune::cpgrid::CpGridData>>& currentData();
 
         /// @brief Returns current view data (the leaf grid)
         const Dune::cpgrid::CpGridData& currentLeafData() const;
@@ -1470,11 +1470,11 @@ namespace Dune
          *
          * All the data of all grids are stored there and
          * calls are forwarded to relevant grid.*/
-        std::vector<std::shared_ptr<cpgrid::CpGridData>> data_;
+        std::shared_ptr<std::vector<cpgrid::CpGridData>> data_;
         /** @brief The data stored for the distributed grid. */
-        std::vector<std::shared_ptr<cpgrid::CpGridData>> distributed_data_;
+        std::shared_ptr<std::vector<cpgrid::CpGridData>> distributed_data_;
         /** @brief A pointer to the current data used. */
-        std::vector<std::shared_ptr<cpgrid::CpGridData>>* current_data_;
+        std::shared_ptr<std::vector<cpgrid::CpGridData>> current_data_;
         /** @brief To get the level given the lgr-name. Default, {"GLOBAL", 0}. */
         std::map<std::string,int> lgr_names_ = {{"GLOBAL", 0}};
         /**
