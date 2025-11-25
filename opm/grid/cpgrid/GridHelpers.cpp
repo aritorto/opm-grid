@@ -89,7 +89,7 @@ const int* cartDims(const Dune::CpGrid& grid)
 
 const int*  globalCell(const Dune::CpGrid& grid)
 {
-    return &(grid.globalCell()[0]);
+    return &(grid.currentData().front()->globalCell()[0]);
 }
 
 #if HAVE_ECL_INPUT
