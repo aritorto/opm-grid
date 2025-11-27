@@ -64,9 +64,46 @@ std::vector<int> mapLevelIndicesToCartesianOutputOrder(const Dune::CpGrid& grid,
     return toOutput;
 }
 
+std::vector<std::vector<int>> levelIdxToLeafIdxMaps(const Dune::CpGrid& grid)
+{
+    int maxLevel = grid.maxLevel();
+
+    std::vector<std::vector<int>> levelIdx_to_leafIdx{};
+    levelIdx_to_leafIdx.resize(maxLevel +1);
+
+    // rubbish value for vanished cells (i.e. parent cells, not appearing on the leaf)
+    for (int level = 0; level <= maxLevel; ++level) {
+        levelIdx_to_leafIdx[level].resize(grid.levelGridView(level).size(0), /* rubbish = */ std::numeric_limits<int>::max());
+    }
+    for (const auto& element : Dune::elements(grid.leafGridView())) {
+        levelIdx_to_leafIdx[ element.level() ][ element.getLevelElem().index() ] = element.index();
+    }
+    return levelIdx_to_leafIdx;
+}
+
+std::vector<std::array<int,2>> getLevelAndLevelIdxOfLeafDescendants(const Dune::cpgrid::Entity<0>& element,
+                                                                    int maxLevel)
+{
+    if (element.isLeaf()) {
+        throw;
+    }
+
+    std::vector<std::array<int,2>> levelAndLevelIdxOfLeafDescendants{}; // {level, child level index}
+
+    auto it = element.hbegin(maxLevel);
+    const auto& endIt = element.hend(maxLevel);
+
+    for (; it != endIt; ++it) {
+        if (it->isLeaf())
+            levelAndLevelIdxOfLeafDescendants.emplace_back(std::array{it->level(), it-> index()});
+    }
+    return levelAndLevelIdxOfLeafDescendants;
+}
+
 void extractSolutionLevelGrids(const Dune::CpGrid& grid,
                                const std::vector<std::vector<int>>& toOutput_refinedLevels,
                                const Opm::data::Solution& leafSolution,
+                               const std::vector<double>& porv_levelZero,
                                std::vector<Opm::data::Solution>& levelSolutions)
 
 {
@@ -81,6 +118,7 @@ void extractSolutionLevelGrids(const Dune::CpGrid& grid,
         leafCellData.visit([&grid,
                             &maxLevel,
                             &toOutput_refinedLevels,
+                            &porv_levelZero,
                             &levelSolutions,
                             &name,
                             &leafCellData](const auto& leafVector) {
@@ -95,20 +133,12 @@ void extractSolutionLevelGrids(const Dune::CpGrid& grid,
                     levelVectors.resize(maxLevel+1);
                     using ScalarType = std::decay_t<decltype(leafVector[0])>;
 
-                    for (int level = 0; level <= maxLevel; ++level) {
-                        // Parent cells get rubbish value: std::numeric_limist<ScalarType>::max()
-                        levelVectors[level].resize(grid.levelGridView(level).size(0),
-                                                   std::numeric_limits<ScalarType>::max());
-                    }
-                    // For level cells that appear in the leaf, extract the data value from leafVector
-                    // and assign it the the equivalent level cell.
-                    for (const auto& element : Dune::elements(grid.leafGridView())) {
-                        levelVectors[element.level()][element.getLevelElem().index()] = leafVector[element.index()];
-                    }
-                    // Use toOutput_levels to reorder in ascending level cartesian indices
-                    for (int level = 1; level<=maxLevel; ++level) { // exclude level zero (does not need reordering)
-                        levelVectors[level] = Opm::Lgr::reorderForOutput(levelVectors[level], toOutput_refinedLevels[level-1]);
-                    }
+                    populateDataVectorLevelGrids<ScalarType>(grid,
+                                                             maxLevel,
+                                                             leafVector,
+                                                             toOutput_refinedLevels,
+                                                             porv_levelZero,
+                                                             levelVectors);
 
                     for (int level = 0; level <= maxLevel; ++level) {
                         if constexpr (std::is_same_v<T, std::vector<double>>) {
