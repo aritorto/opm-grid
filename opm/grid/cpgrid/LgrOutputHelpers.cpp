@@ -64,42 +64,6 @@ std::vector<int> mapLevelIndicesToCartesianOutputOrder(const Dune::CpGrid& grid,
     return toOutput;
 }
 
-std::vector<std::vector<int>> levelIdxToLeafIdxMaps(const Dune::CpGrid& grid)
-{
-    int maxLevel = grid.maxLevel();
-
-    std::vector<std::vector<int>> levelIdx_to_leafIdx{};
-    levelIdx_to_leafIdx.resize(maxLevel +1);
-
-    // rubbish value for vanished cells (i.e. parent cells, not appearing on the leaf)
-    for (int level = 0; level <= maxLevel; ++level) {
-        levelIdx_to_leafIdx[level].resize(grid.levelGridView(level).size(0), /* rubbish = */ std::numeric_limits<int>::max());
-    }
-    for (const auto& element : Dune::elements(grid.leafGridView())) {
-        levelIdx_to_leafIdx[ element.level() ][ element.getLevelElem().index() ] = element.index();
-    }
-    return levelIdx_to_leafIdx;
-}
-
-std::vector<std::array<int,2>> getLevelAndLevelIdxOfLeafDescendants(const Dune::cpgrid::Entity<0>& element,
-                                                                    int maxLevel)
-{
-    if (element.isLeaf()) {
-        throw;
-    }
-
-    std::vector<std::array<int,2>> levelAndLevelIdxOfLeafDescendants{}; // {level, child level index}
-
-    auto it = element.hbegin(maxLevel);
-    const auto& endIt = element.hend(maxLevel);
-
-    for (; it != endIt; ++it) {
-        if (it->isLeaf())
-            levelAndLevelIdxOfLeafDescendants.emplace_back(std::array{it->level(), it-> index()});
-    }
-    return levelAndLevelIdxOfLeafDescendants;
-}
-
 void extractSolutionLevelGrids(const Dune::CpGrid& grid,
                                const std::vector<std::vector<int>>& toOutput_refinedLevels,
                                const Opm::data::Solution& leafSolution,
@@ -133,12 +97,22 @@ void extractSolutionLevelGrids(const Dune::CpGrid& grid,
                     levelVectors.resize(maxLevel+1);
                     using ScalarType = std::decay_t<decltype(leafVector[0])>;
 
-                    populateDataVectorLevelGrids<ScalarType>(grid,
-                                                             maxLevel,
-                                                             leafVector,
-                                                             toOutput_refinedLevels,
-                                                             porv_levelZero,
-                                                             levelVectors);
+                    auto childrenDataFunc = [] {
+                        if constexpr (std::is_same_v<ScalarType, double>)
+                            return AverageChildrenData<ScalarType>{};
+                        else
+                            return MaxChildrenData<ScalarType>{};
+                    }();
+
+                    using FunctorType = std::decay_t<decltype(childrenDataFunc)>;
+                    populateDataVectorLevelGrids<ScalarType, FunctorType>(grid,
+                                                                          maxLevel,
+                                                                          leafVector,
+                                                                          toOutput_refinedLevels,
+                                                                          porv_levelZero,
+                                                                          levelVectors,
+                                                                          childrenDataFunc);
+
 
                     for (int level = 0; level <= maxLevel; ++level) {
                         if constexpr (std::is_same_v<T, std::vector<double>>) {

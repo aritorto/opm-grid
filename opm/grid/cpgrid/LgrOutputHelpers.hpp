@@ -28,10 +28,64 @@
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
+#include <algorithm>    // for std::min/max
 #include <cstddef>      // for std::size_t
 #include <utility>      // for std::move
 #include <type_traits>  // for std::is_same_v
 #include <vector>
+
+template<class ScalarType>
+struct MinChildrenData{
+    void operator()(int level, 
+                    int levelIdx,
+                    const std::vector<std::vector<ScalarType>>& levelVectors)
+    {
+        min = std::min(min, levelVectors[ level ][ levelIdx ]);
+    }
+    
+    ScalarType getValue()
+    {
+        return min;
+    }
+    
+    ScalarType min{};
+};
+
+template<class ScalarType>
+struct MaxChildrenData{
+    void operator()(int level, 
+                    int levelIdx,
+                    const std::vector<std::vector<ScalarType>>& levelVectors)
+    {
+        max = std::max(max, levelVectors[ level ][ levelIdx ]);
+    }
+    
+    ScalarType getValue()
+    {
+        return max;
+    }
+    
+    ScalarType max{};
+};
+
+template<class ScalarType>
+struct AverageChildrenData{
+    void operator()(int level, 
+                    int levelIdx,
+                    const std::vector<std::vector<ScalarType>>& levelVectors)
+    {
+        partialSum+= levelVectors[ level ][ levelIdx ];
+        ++count;
+    }
+    
+    ScalarType getValue()
+    {
+        return partialSum/count;
+    }
+    
+    std::size_t count{};
+    ScalarType partialSum{};
+};
 
 namespace Opm
 {
@@ -63,39 +117,6 @@ template <typename Container>
 Container reorderForOutput(const Container& simulatorContainer,
                            const std::vector<int>& toOutput);
 
-/// @brief Creates a mapping from level-element indices to corresponding leaf-element indices.
-///
-/// For each level of the grid, this function maps every element index to the
-/// index of its corresponding element index on the leaf grid. If a level-element
-/// does not exist on the leaf (i.e., it is a parent cell with no leaf representation),
-/// the value std::numeric_limits<int>::max() is stored to indicate an invalid
-/// non-leaf entry.
-///
-/// @param [in] grid
-/// @return A vector each entry represents the map between level indices
-///         and leaf indices, per level grid.
-///         map[ level ][ level element idx ] = leaf index, if leaf; rubbish otherwise.
-std::vector<std::vector<int>> levelIdxToLeafIdxMaps(const Dune::CpGrid& grid);
-
-/// @brief Collect level and level indices of leaf descendants.
-///
-/// This function gathers the {level, level-index} pairs of all *leaf* descendants
-/// of a given element. It may only be called on elements that are *not* leaf
-/// themselves. If the input element already appears on the leaf grid, this
-/// method throws.
-///
-/// Example: Supposed an element is refined into nx.ny.nz children in level l1, with indices
-/// in level l1 { i1, i2, ..., iN}. One of its chidldren in l1, let's say i2, got refined
-/// into n1x.n1y.n1z in level l2 with level l2 indices {j1, j2, ..., jM}. No further refinement
-/// is performed. Then, the resulting list of level and level indices of leaf descendants is:
-/// { {l1, i1}, {l2, j1}, {l2, j2}, ...,{l2,jM}, {l1, i3}, ..., {l1, iN} }
-///
-/// @param [in] element   Element whose leaf descendants should be collected.
-/// @parem [in] maxLevel  Maximum refinement level to consider.
-/// @return A vector of {level, level index} pairs for all leaf descendants.
-std::vector<std::array<int,2>> getLevelAndLevelIdxOfLeafDescendants(const Dune::cpgrid::Entity<0>& element,
-                                                                    int maxLevel);
-
 /// @breif Compute the average of the children data values
 ///
 /// @param [in] levelVectors A collection of per-level data vectors.
@@ -111,6 +132,13 @@ ScalarType averageChildrenData(const std::vector<std::vector<ScalarType>>& level
                                const Dune::CpGrid& grid,
                                const std::vector<double>& porv_levelZero);
 
+template <typename ScalarType, typename Functor>
+ScalarType processChildrenData(const std::vector<std::vector<ScalarType>>& levelVectors,
+                               const Dune::cpgrid::Entity<0>& element,
+                               const Dune::CpGrid& grid,
+                               const std::vector<double>& porv_levelZero,
+                               Functor func);
+
 /// @brief Populate level data vectors based on leaf vector, for a specific named data field.
 ///
 /// @param [in]       grid
@@ -123,13 +151,14 @@ ScalarType averageChildrenData(const std::vector<std::vector<ScalarType>>& level
 /// @param [out]      levelVectors A collection of per-level data vectors.
 ///                                levelVectors[l][i] contains the data value for the element at level l
 ///                                with level index i.
-template <typename ScalarType>
+template <typename ScalarType, typename Functor>
 void populateDataVectorLevelGrids(const Dune::CpGrid& grid,
                                   int maxLevel,
                                   const std::vector<ScalarType>& leafVector,
                                   const std::vector<std::vector<int>>& toOutput_refinedLevels,
                                   const std::vector<double>& porv_levelZero,
-                                  std::vector<std::vector<ScalarType>>& levelVectors);
+                                  std::vector<std::vector<ScalarType>>& levelVectors,
+                                  Functor func);
 
 /// @brief Extracts and organizes solution data for all grid refinement levels.
 ///
@@ -220,8 +249,9 @@ ScalarType Opm::Lgr::averageChildrenData(const std::vector<std::vector<ScalarTyp
                       };
 
     int count = 0;
-    for (const auto& level_levelIdx : getLevelAndLevelIdxOfLeafDescendants(element, grid.maxLevel())) {
-        partialSum += termToAdd(level_levelIdx[0], level_levelIdx[1]);
+    const auto& [level, level_indices] = grid.currentData()[element.level()]->getChildrenLevelAndIndexList(element.index());
+    for (const auto& levelIdx : level_indices) {
+        partialSum += termToAdd(level, levelIdx);
         ++count;
     }
     // If ScalarType == int, when dividing by int 'count', it'd be int division.
@@ -234,13 +264,29 @@ ScalarType Opm::Lgr::averageChildrenData(const std::vector<std::vector<ScalarTyp
     }
 }
 
-template <typename ScalarType>
+template <typename ScalarType, typename Functor>
+ScalarType Opm::Lgr::processChildrenData(const std::vector<std::vector<ScalarType>>& levelVectors,
+                                         const Dune::cpgrid::Entity<0>& element,
+                                         const Dune::CpGrid& grid,
+                                         const std::vector<double>& porv_levelZero,
+                                         Functor func)
+{
+    const auto& [level, level_indices] = grid.currentData()[element.level()]->getChildrenLevelAndIndexList(element.index());
+    
+    for (const auto& levelIdx : level_indices) {
+        func(level, levelIdx, levelVectors); 
+    }
+    return func.getValue(); 
+}
+
+template <typename ScalarType, typename Functor>
 void Opm::Lgr::populateDataVectorLevelGrids(const Dune::CpGrid& grid,
                                             int maxLevel,
                                             const std::vector<ScalarType>& leafVector,
                                             const std::vector<std::vector<int>>& toOutput_refinedLevels,
                                             const std::vector<double>& porv_levelZero,
-                                            std::vector<std::vector<ScalarType>>& levelVectors)
+                                            std::vector<std::vector<ScalarType>>& levelVectors,
+                                            Functor func)
 {
     for (int level = 0; level <= maxLevel; ++level) {
         levelVectors[level].resize(grid.levelGridView(level).size(0));
@@ -251,15 +297,16 @@ void Opm::Lgr::populateDataVectorLevelGrids(const Dune::CpGrid& grid,
         levelVectors[element.level()][element.getLevelElem().index()] = leafVector[element.index()];
     }
     // Note that all cells from maxLevel have assigned values at this point.
-    // Now, assign values for parent cells (for now, average of children values).
+    // Now, assign values for parent cells (for now, average of children values). 
     if (maxLevel)  {
         for (int level = maxLevel-1; level >= 0; --level) {
             for (const auto& element : Dune::elements(grid.levelGridView(level))) {
                 if (!element.isLeaf()) {
-                    levelVectors[level][element.index()] = Opm::Lgr::averageChildrenData(levelVectors,
+                    levelVectors[level][element.index()] = Opm::Lgr::processChildrenData(levelVectors,
                                                                                          element,
                                                                                          grid,
-                                                                                         porv_levelZero);
+                                                                                         porv_levelZero,
+                                                                                         func);
                 }
             }
         }
@@ -312,13 +359,15 @@ void Opm::Lgr::extractRestartValueLevelGrids(const Grid& grid,
 
             std::vector<std::vector<double>> levelVectors{};
             levelVectors.resize(maxLevel+1);
-
-            Opm::Lgr::populateDataVectorLevelGrids<double>(grid,
-                                                           maxLevel,
-                                                           leafVector,
-                                                           toOutput_refinedLevels,
-                                                           porv_levelZero,
-                                                           levelVectors);
+            
+            AverageChildrenData<double> average{};
+            Opm::Lgr::populateDataVectorLevelGrids<double, AverageChildrenData<double>>(grid,
+                                                                                        maxLevel,
+                                                                                        leafVector,
+                                                                                        toOutput_refinedLevels,
+                                                                                        porv_levelZero,
+                                                                                        levelVectors,
+                                                                                        average);
 
             for (int level = 0; level <= maxLevel; ++level) {
                 restartValue_levels[level].addExtra(rst_key.key, rst_key.dim, std::move(levelVectors[level]));
