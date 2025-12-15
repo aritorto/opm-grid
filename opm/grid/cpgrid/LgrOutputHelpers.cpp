@@ -67,7 +67,6 @@ std::vector<int> mapLevelIndicesToCartesianOutputOrder(const Dune::CpGrid& grid,
 void extractSolutionLevelGrids(const Dune::CpGrid& grid,
                                const std::vector<std::vector<int>>& toOutput_refinedLevels,
                                const Opm::data::Solution& leafSolution,
-                               const std::vector<double>& porv_levelZero,
                                std::vector<Opm::data::Solution>& levelSolutions)
 
 {
@@ -82,7 +81,6 @@ void extractSolutionLevelGrids(const Dune::CpGrid& grid,
         leafCellData.visit([&grid,
                             &maxLevel,
                             &toOutput_refinedLevels,
-                            &porv_levelZero,
                             &levelSolutions,
                             &name,
                             &leafCellData](const auto& leafVector) {
@@ -109,7 +107,6 @@ void extractSolutionLevelGrids(const Dune::CpGrid& grid,
                                                                           maxLevel,
                                                                           leafVector,
                                                                           toOutput_refinedLevels,
-                                                                          porv_levelZero,
                                                                           levelVectors,
                                                                           childrenDataFunc);
 

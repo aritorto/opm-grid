@@ -159,11 +159,9 @@ void restrictFakeLeafDataToLevelGrids(const Dune::CpGrid& grid,
                               Opm::UnitSystem::measure::liquid_surface_volume, // just one possible meassure
                               std::move(leafExtra));
 
-    std::vector<double> porv_levelZero(grid.levelGridView(0).size(0), 1.); // easy value for all level-zero cells.
     std::vector<Opm::RestartValue> restartValue_levels{};
     Opm::Lgr::extractRestartValueLevelGrids<Dune::CpGrid>(grid,
                                                           leafRestartValue,
-                                                          porv_levelZero,
                                                           restartValue_levels);
 
 

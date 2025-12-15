@@ -36,53 +36,53 @@
 
 template<class ScalarType>
 struct MinChildrenData{
-    void operator()(int level, 
+    void operator()(int level,
                     int levelIdx,
                     const std::vector<std::vector<ScalarType>>& levelVectors)
     {
         min = std::min(min, levelVectors[ level ][ levelIdx ]);
     }
-    
+
     ScalarType getValue()
     {
         return min;
     }
-    
+
     ScalarType min{};
 };
 
 template<class ScalarType>
 struct MaxChildrenData{
-    void operator()(int level, 
+    void operator()(int level,
                     int levelIdx,
                     const std::vector<std::vector<ScalarType>>& levelVectors)
     {
         max = std::max(max, levelVectors[ level ][ levelIdx ]);
     }
-    
+
     ScalarType getValue()
     {
         return max;
     }
-    
+
     ScalarType max{};
 };
 
 template<class ScalarType>
 struct AverageChildrenData{
-    void operator()(int level, 
+    void operator()(int level,
                     int levelIdx,
                     const std::vector<std::vector<ScalarType>>& levelVectors)
     {
         partialSum+= levelVectors[ level ][ levelIdx ];
         ++count;
     }
-    
+
     ScalarType getValue()
     {
         return partialSum/count;
     }
-    
+
     std::size_t count{};
     ScalarType partialSum{};
 };
@@ -117,7 +117,7 @@ template <typename Container>
 Container reorderForOutput(const Container& simulatorContainer,
                            const std::vector<int>& toOutput);
 
-/// @breif Compute the average of the children data values
+/// @breif Compute the parent data from the children data values
 ///
 /// @param [in] levelVectors A collection of per-level data vectors.
 ///                          levelVectors[l][i] contains the data value for the element at level l
@@ -125,18 +125,12 @@ Container reorderForOutput(const Container& simulatorContainer,
 /// @param [in] element      A non-leaf element (parent cell). Its children data
 ///                          will be used to compute the average.
 /// @param [in] grid         The grid from which the element is taken.
-/// @return Average of children data values. If ScalarTypeis double, it's the pore volume average.
-template <typename ScalarType>
-ScalarType averageChildrenData(const std::vector<std::vector<ScalarType>>& levelVectors,
-                               const Dune::cpgrid::Entity<0>& element,
-                               const Dune::CpGrid& grid,
-                               const std::vector<double>& porv_levelZero);
-
+/// @param [in] functor      To compute either min, max, average, ... of children data.
+/// @return Parent data computed from children data values.
 template <typename ScalarType, typename Functor>
 ScalarType processChildrenData(const std::vector<std::vector<ScalarType>>& levelVectors,
                                const Dune::cpgrid::Entity<0>& element,
                                const Dune::CpGrid& grid,
-                               const std::vector<double>& porv_levelZero,
                                Functor func);
 
 /// @brief Populate level data vectors based on leaf vector, for a specific named data field.
@@ -147,7 +141,6 @@ ScalarType processChildrenData(const std::vector<std::vector<ScalarType>>& level
 /// @param [in]       toOutput_refinedLevels For level grids 1,2,..,maxLevel, a map to store
 ///                                          data in the order expected by outout files
 ///                                          (increasing level Cartesian indices).
-/// @param [in]       porv_levelZero Vector containing pore volume cell data for level-zero grid cells.
 /// @param [out]      levelVectors A collection of per-level data vectors.
 ///                                levelVectors[l][i] contains the data value for the element at level l
 ///                                with level index i.
@@ -156,7 +149,6 @@ void populateDataVectorLevelGrids(const Dune::CpGrid& grid,
                                   int maxLevel,
                                   const std::vector<ScalarType>& leafVector,
                                   const std::vector<std::vector<int>>& toOutput_refinedLevels,
-                                  const std::vector<double>& porv_levelZero,
                                   std::vector<std::vector<ScalarType>>& levelVectors,
                                   Functor func);
 
@@ -177,14 +169,12 @@ void populateDataVectorLevelGrids(const Dune::CpGrid& grid,
 ///                                          (increasing level Cartesian indices)
 /// @param [in]       leafSolution The complete solution defined on the leaf grid, containing
 ///                                one or more named data fields (e.g., pressure, saturation).
-/// @param [in] porv_levelZero Vector containing pore volume cell data for level-zero grid active cells.
 /// @param [out]   A vector of Opm::data::Solution objects, one for each refinement level
 ///                (from level 0 to grid.maxLevel()), where each entry contains data reordered
 ///                according to increasing level Cartesian indices for output.
 void extractSolutionLevelGrids(const Dune::CpGrid& grid,
                                const std::vector<std::vector<int>>& toOutput_refinedLevels,
                                const Opm::data::Solution& leafSolution,
-                               const std::vector<double>& porv_levelZero,
                                std::vector<Opm::data::Solution>&);
 
 /// @brief Constructs restart-value containers for all grid refinement levels.
@@ -196,13 +186,11 @@ void extractSolutionLevelGrids(const Dune::CpGrid& grid,
 /// @param [template] Grid The function has no effect for grids other than CpGrid.
 /// @param [in]       grid
 /// @param [in]       leafRestartValue
-/// @param [in]       porv_levelZero Vector containing cell pore volume data for level-zero grid cells.
 /// @param [out]      A vector of RestartValue objects, one for each refinement level
 ///                   (from level 0 to grid.maxLevel()).
 template <typename Grid>
 void extractRestartValueLevelGrids(const Grid& grid,
                                    const Opm::RestartValue& leafRestartValue,
-                                   const std::vector<double>& porv_levelZero,
                                    std::vector<Opm::RestartValue>& restartValue_levels);
 
 } // namespace Lgr
@@ -221,62 +209,18 @@ Container Opm::Lgr::reorderForOutput(const Container& simulatorContainer,
     return outputContainer;
 }
 
-template <typename ScalarType>
-ScalarType Opm::Lgr::averageChildrenData(const std::vector<std::vector<ScalarType>>& levelVectors,
-                                         const Dune::cpgrid::Entity<0>& element,
-                                         const Dune::CpGrid& grid,
-                                         const std::vector<double>& porv_levelZero)
-{
-    ScalarType partialSum{};
-
-    auto termToAdd = [&levelVectors,
-                      &grid,
-                      &porv_levelZero](int level, int levelIdx)
-                      {
-                          ScalarType term{};
-                          if constexpr( std::is_same_v<ScalarType, int>) {
-                              term = levelVectors[ level ][ levelIdx ];
-                          }
-                          else {
-                              const auto& child = Dune::cpgrid::Entity<0>(*grid.currentData()[level], levelIdx, true);
-                              // (!) for nested refinement: instead of child.father(), use child.getOrigin()
-                              const auto& origin = child.getOrigin();
-                              // child_porv =  parent-cell-porv * child-cell-volume/parent-cell-volume
-                              const auto child_porv = porv_levelZero[ origin.index() ]*child.geometry().volume()/origin.geometry().volume();
-                              term = levelVectors[ level ][ levelIdx ]*child_porv;
-                          }
-                          return term;
-                      };
-
-    int count = 0;
-    const auto& [level, level_indices] = grid.currentData()[element.level()]->getChildrenLevelAndIndexList(element.index());
-    for (const auto& levelIdx : level_indices) {
-        partialSum += termToAdd(level, levelIdx);
-        ++count;
-    }
-    // If ScalarType == int, when dividing by int 'count', it'd be int division.
-    if constexpr( std::is_same_v<ScalarType, int> ) {
-        return partialSum/count; // (sum_{i in children} child_i_data) / total_children
-    }
-    else { // element pore volume = parent-cell-porv * element-cell-volume/parent-cell-volume
-        double elemPorv = porv_levelZero[ element.getOrigin().index() ]*element.geometry().volume()/element.getOrigin().geometry().volume();
-        return partialSum/elemPorv;  // (sum_{i in children} child_i_data * child_i_pore_volume)/ element_pore_volume
-    }
-}
-
 template <typename ScalarType, typename Functor>
 ScalarType Opm::Lgr::processChildrenData(const std::vector<std::vector<ScalarType>>& levelVectors,
                                          const Dune::cpgrid::Entity<0>& element,
                                          const Dune::CpGrid& grid,
-                                         const std::vector<double>& porv_levelZero,
                                          Functor func)
 {
     const auto& [level, level_indices] = grid.currentData()[element.level()]->getChildrenLevelAndIndexList(element.index());
-    
+
     for (const auto& levelIdx : level_indices) {
-        func(level, levelIdx, levelVectors); 
+        func(level, levelIdx, levelVectors);
     }
-    return func.getValue(); 
+    return func.getValue();
 }
 
 template <typename ScalarType, typename Functor>
@@ -284,7 +228,6 @@ void Opm::Lgr::populateDataVectorLevelGrids(const Dune::CpGrid& grid,
                                             int maxLevel,
                                             const std::vector<ScalarType>& leafVector,
                                             const std::vector<std::vector<int>>& toOutput_refinedLevels,
-                                            const std::vector<double>& porv_levelZero,
                                             std::vector<std::vector<ScalarType>>& levelVectors,
                                             Functor func)
 {
@@ -297,7 +240,7 @@ void Opm::Lgr::populateDataVectorLevelGrids(const Dune::CpGrid& grid,
         levelVectors[element.level()][element.getLevelElem().index()] = leafVector[element.index()];
     }
     // Note that all cells from maxLevel have assigned values at this point.
-    // Now, assign values for parent cells (for now, average of children values). 
+    // Now, assign values for parent cells (for now, average of children values).
     if (maxLevel)  {
         for (int level = maxLevel-1; level >= 0; --level) {
             for (const auto& element : Dune::elements(grid.levelGridView(level))) {
@@ -305,7 +248,6 @@ void Opm::Lgr::populateDataVectorLevelGrids(const Dune::CpGrid& grid,
                     levelVectors[level][element.index()] = Opm::Lgr::processChildrenData(levelVectors,
                                                                                          element,
                                                                                          grid,
-                                                                                         porv_levelZero,
                                                                                          func);
                 }
             }
@@ -320,14 +262,13 @@ void Opm::Lgr::populateDataVectorLevelGrids(const Dune::CpGrid& grid,
 template <typename Grid>
 void Opm::Lgr::extractRestartValueLevelGrids(const Grid& grid,
                                              const Opm::RestartValue& leafRestartValue,
-                                             const std::vector<double>& porv_levelZero,
                                              std::vector<Opm::RestartValue>& restartValue_levels)
 {
     if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
 
         int maxLevel = grid.maxLevel();
         restartValue_levels.resize(maxLevel+1); // level 0, 1, ..., max level
-        
+
         // To store leafRestartValue.extra data in the order expected
         // by outout files (increasing level Cartesian indices)
         std::vector<std::vector<int>> toOutput_refinedLevels{};
@@ -342,7 +283,6 @@ void Opm::Lgr::extractRestartValueLevelGrids(const Grid& grid,
         extractSolutionLevelGrids(grid,
                                   toOutput_refinedLevels,
                                   leafRestartValue.solution,
-                                  porv_levelZero,
                                   dataSolutionLevels);
 
 
@@ -359,13 +299,12 @@ void Opm::Lgr::extractRestartValueLevelGrids(const Grid& grid,
 
             std::vector<std::vector<double>> levelVectors{};
             levelVectors.resize(maxLevel+1);
-            
+
             AverageChildrenData<double> average{};
             Opm::Lgr::populateDataVectorLevelGrids<double, AverageChildrenData<double>>(grid,
                                                                                         maxLevel,
                                                                                         leafVector,
                                                                                         toOutput_refinedLevels,
-                                                                                        porv_levelZero,
                                                                                         levelVectors,
                                                                                         average);
 
