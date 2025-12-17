@@ -134,6 +134,16 @@ ScalarType processChildrenData(const std::vector<std::vector<ScalarType>>& level
                                const Dune::cpgrid::Entity<0>& element,
                                const Dune::CpGrid& grid,
                                Functor func);
+
+/// @brief Map level Cartesian index to level compressed index (active cell)
+///
+/// @param [in] grid
+/// @param [in] levelCartesianIndexMapper
+/// @return Vector of unordered maps, each entry holds the map for a level grid.
+///         levelCartesianIndex (key) -> levelCompressedIndex (value).
+std::vector<std::unordered_map<int,int>>
+levelCartesianToLevelCompressedMaps(const Dune::CpGrid& grid,
+                                    const Opm::LevelCartesianIndexMapper<Dune::CpGrid>& levelCartMapp);
                                
 /// @brief Populate level data vectors based on leaf vector, for a specific named data field.
 ///
