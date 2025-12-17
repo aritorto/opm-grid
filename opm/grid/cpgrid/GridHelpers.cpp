@@ -84,7 +84,7 @@ int numCellFaces(const Dune::CpGrid& grid)
 
 const int* cartDims(const Dune::CpGrid& grid)
 {
-    return &(grid.logicalCartesianSize()[0]);
+    return &(grid.currentData().front()->logicalCartesianSize()[0]);
 }
 
 const int*  globalCell(const Dune::CpGrid& grid)
