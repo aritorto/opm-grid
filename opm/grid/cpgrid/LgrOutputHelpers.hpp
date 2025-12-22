@@ -24,6 +24,7 @@
 #include <opm/grid/cpgrid/CartesianIndexMapper.hpp>
 #include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 
+#include <opm/input/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
@@ -215,15 +216,22 @@ void extractRestartValueLevelGrids(const Grid& grid,
 /// @param [in] cartMapp     CartesianIndexMapper of the grid
 /// @param [in] cartDims     Cartesian dimensions of the grid (coincide with level zero grid).
 /// @param [in] directVerticalNeighbors
-template <typename Grid, typename TransmissibilityType, typename CartesianMapper, typename DirectVerticalNeighborsFunc>
-void extractTransLevelZero(const Grid& grid,
+template <typename Grid, typename TransmissibilityType, typename DirectVecticalNeighborsFunc>
+void extractTransLevelGrids(const Grid& grid,
+                            const TransmissibilityType& leafTrans,
+                            std::vector<Opm::data::Solution>& outputTrans_levels,
+                            const DirectVecticalNeighborsFunc& directVerticalNeighbors);
+
+template <typename Grid, typename TransmissibilityType, typename CartesianMapper,  typename DirectVecticalNeighborsFunc>
+void extractNNCsLevelGrids(const Grid& grid,
                            const TransmissibilityType& leafTrans,
-                           Opm::data::CellData& tranx,
-                           Opm::data::CellData& trany,
-                           Opm::data::CellData& tranz,
+                           const std::vector<std::size_t>& numAquCell,
+                           std::vector<Opm::NNCdata>& nncData,
+                           std::vector<std::vector<Opm::NNCdata>>& outputNNC_levels,
+                           Opm::UnitSystem unitSystem,
                            const CartesianMapper& cartMapp,
                            const std::array<int,3>& cartDims,
-                           const DirectVerticalNeighborsFunc& directVerticalNeighbors);
+                           const DirectVecticalNeighborsFunc& directVerticalNeighbors);
 
 } // namespace Lgr
 } // namespace Opm
@@ -355,69 +363,213 @@ void Opm::Lgr::extractRestartValueLevelGrids(const Grid& grid,
     }
 }
 
-template <typename Grid, typename TransmissibilityType, typename CartesianMapper, typename DirectVecticalNeighborsFunc>
-void Opm::Lgr::extractTransLevelZero(const Grid& grid,
-                                     const TransmissibilityType& leafTrans,
-                                     Opm::data::CellData& tranx,
-                                     Opm::data::CellData& trany,
-                                     Opm::data::CellData& tranz,
-                                     const CartesianMapper& cartMapp,
-                                     const std::array<int,3>& cartDims,
-                                     const DirectVecticalNeighborsFunc& directVerticalNeighbors)
+template <typename Grid, typename TransmissibilityType, typename DirectVecticalNeighborsFunc>
+void Opm::Lgr::extractTransLevelGrids(const Grid& grid,
+                                      const TransmissibilityType& leafTrans,
+                                      std::vector<Opm::data::Solution>& outputTrans_levels,
+                                      const DirectVecticalNeighborsFunc& directVerticalNeighbors)
 
 {
     if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
-        // To detect direct vertical neighboring cells:
+
+        // To store transmissibility between cells sharing an intersection,
+        // both cells belonging to the same level grid.
+        outputTrans_levels.resize(grid.maxLevel()+1); // level 0, 1, 2,  ..., max level
+
         const Opm::LevelCartesianIndexMapper<Dune::CpGrid> levelCartMapp(grid);
-        const auto levelCartToLevelCompressed = Opm::Lgr::levelCartesianToLevelCompressedMaps(grid, levelCartMapp);
+        // To detect direct vertical neighboring cells:
+        const auto levelCartToLevelCompressed = levelCartesianToLevelCompressedMaps(grid, levelCartMapp);
+
+        for (int level = 0; level <= grid.maxLevel(); ++level) {
+
+            const auto& levelCartDims = levelCartMapp.cartesianDimensions(level);
+
+            auto createCellData = [&levelCartDims]() {
+                return Opm::data::CellData{
+                    Opm::UnitSystem::measure::transmissibility,
+                    std::vector<double>(levelCartDims[0] * levelCartDims[1] * levelCartDims[2], 0.0),
+                    Opm::data::TargetType::INIT
+                };
+            };
+
+            outputTrans_levels[level].clear();
+            outputTrans_levels[level].emplace("TRANX", createCellData());
+            outputTrans_levels[level].emplace("TRANY", createCellData());
+            outputTrans_levels[level].emplace("TRANZ", createCellData());
+        }
 
         // Extract transmissibility values for intersections between leaf cells
-        // belonging to level zero grid
+        // belonging to different level grids.
         for (const auto& element : Dune::elements(grid.leafGridView())) {
             for (const auto& intersection : Dune::intersections(grid.leafGridView(), element)) {
                 if (!intersection.neighbor())  // intersection is on the domain boundary
                     continue;
-                if ((intersection.inside().level()>0) || (intersection.outside().level()>0))
-                    continue; // for now, we only care about level zero cells
+                if (intersection.inside().level() != intersection.outside().level())
+                    continue; // only care of cells in same level now
+
+                int level = intersection.inside().level();
+                
+                const auto& levelIn = intersection.inside().getLevelElem();
+                const auto& levelOut = intersection.outside().getLevelElem();
+
+                const int levelCartIdxIn = levelCartMapp.cartesianIndex(levelIn.index(), level);
+                const int levelCartIdxOut = levelCartMapp.cartesianIndex(levelOut.index(), level);
+
+                if (levelCartIdxIn > levelCartIdxOut)
+                    continue; // we only need to handle each connection once.
+
+                const auto& levelCartDims = levelCartMapp.cartesianDimensions(level);
+                
+                const unsigned leafIdxIn = intersection.inside().index();
+                const unsigned leafIdxOut = intersection.outside().index();
+
+                if (levelCartIdxOut - levelCartIdxIn == 1 && levelCartDims[0] > 1 ) {
+                    outputTrans_levels[level].at("TRANX").template data<double>()[levelCartIdxIn]
+                        = leafTrans.transmissibility(leafIdxIn, leafIdxOut);
+                    continue;
+                }
+
+                if (levelCartIdxOut - levelCartIdxIn == levelCartDims[0] && levelCartDims[1] > 1) {
+                    outputTrans_levels[level].at("TRANX").template data<double>()[levelCartIdxIn]
+                        = leafTrans.transmissibility(leafIdxIn, leafIdxOut);
+                    continue;
+                }
+
+                if ( levelCartIdxOut - levelCartIdxIn == levelCartDims[0]*levelCartDims[1] ||
+                     directVerticalNeighbors(levelCartDims,
+                                             levelCartToLevelCompressed[level],
+                                             levelCartIdxIn,     // min
+                                             levelCartIdxOut)) { // max
+                    outputTrans_levels[level].at("TRANX").template data<double>()[levelCartIdxIn]
+                        = leafTrans.transmissibility(leafIdxIn, leafIdxOut);
+                }
+            } // end-intersection-loop
+        } // end-element-loop
+    }
+}
+
+template <typename Grid, typename TransmissibilityType, typename CartesianMapper,  typename DirectVecticalNeighborsFunc>
+void Opm::Lgr::extractNNCsLevelGrids(const Grid& grid,
+                                     const TransmissibilityType& leafTrans,
+                                     const std::vector<std::size_t>& numAquCell,
+                                     const std::vector<Opm::NNCdata>& nncData,
+                                     std::vector<std::vector<Opm::NNCdata>>& outputNNC_levels,
+                                     Opm::UnitSystem unitSystem,
+                                     const CartesianMapper& cartMapp,
+                                     const std::array<int,3>& cartDims,
+                                     const DirectVecticalNeighborsFunc& directVerticalNeighbors)
+{
+    if constexpr (std::is_same_v<Grid, Dune::CpGrid>) {
+
+        outputNNC_levels.resize(grid.maxLevel()+1); // level 0, 1, 2,  ..., max level
+         
+        const Opm::LevelCartesianIndexMapper<Dune::CpGrid> levelCartMapp(grid);
+        // To detect direct vertical neighboring cells:
+        const auto levelCartToLevelCompressed = levelCartesianToLevelCompressedMaps(grid, levelCartMapp);
+
+        auto isNumAquCell = [&numAquCell]
+            (const std::size_t levelZeroCellIdx)
+        {
+            return std::binary_search(numAquCell.begin(), numAquCell.end(), levelZeroCellIdx);
+        };
+
+        auto isNumAquConn = [&isNumAquCell](const std::size_t levelZeroCellIdx1,
+                                            const std::size_t levelZeroCellIdx2)
+        {
+            return isNumAquCell(levelZeroCellIdx1) || isNumAquCell(levelZeroCellIdx2);
+        };
+
+        auto isCartesianNeighbour = [&cartDims]
+            (const std::size_t cartIdx1, const std::size_t cartIdx2)
+        {
+            const auto cartIdxDiff = cartIdx2 - cartIdx1;
+
+            return (cartIdxDiff == 1)
+                || (cartIdxDiff == cartDims[0])
+                || (cartIdxDiff == cartDims[0] * cartDims[0]);
+        };
+
+        auto activeCell = [&levelCartToLevelCompressed](const std::size_t cellIdx)
+        {
+            auto pos = levelCartToLevelCompressed[0].find(cellIdx);
+            return (pos == levelCartToLevelCompressed[0].end()) ? -1 : pos->second;
+        };
+
+       
+
+        auto isDirectNeighbours = [&isCartesianNeighbour, &levelCartToLevelCompressed,
+                                   &cartDims, &directVerticalNeighbors]
+            (const std::size_t cellIdx1, const std::size_t cellIdx2)
+        {
+            return isCartesianNeighbour(cellIdx1, cellIdx2)
+                || directVerticalNeighbors(cartDims, levelCartToLevelCompressed[0], cellIdx1, cellIdx2);
+        };
+
+        for (const auto& element : Dune::elements(grid.leafGridView())) {
+            for (const auto& intersection : intersections(grid.leafGridView(), element)) {
+                if (!intersection.neighbor())
+                    continue; // intersection is on the domain boundary
+
+                if (intersection.inside().level() == intersection.outside().level())
+                    continue; // only care of cells in different levels
+
+                int levelIn = intersection.inside().level();
+                int levelOut = intersection.outside().level();
+
+                const auto& levelElemIn = intersection.inside().getLevelElem();
+                const auto& levelElemOut = intersection.outside().getLevelElem();
+
+                const int levelCartIdxIn = levelCartMapp.cartesianIndex(levelElemIn.index(), levelIn);
+                const int levelCartIdxOut = levelCartMapp.cartesianIndex(levelElemOut.index(), levelOut);
 
                 const unsigned leafIdxIn = intersection.inside().index();
                 const unsigned leafIdxOut = intersection.outside().index();
 
-                // Leaf cells that belong to level zero grid, in particular,
-                // they have diffent 'origin' cell in level zero. Therefore,
-                // different Cartesian Index.
-                const int cartIdxIn = cartMapp.cartesianIndex(leafIdxIn);
-                const int cartIdxOut = cartMapp.cartesianIndex(leafIdxOut);
-
-                if (cartIdxIn > cartIdxOut)
+                if (leafIdxIn > leafIdxOut)
                     continue; // we only need to handle each connection once.
 
-                // We use min and max level zero Cartesian indices to distinguish
-                // X, Y, and Z transmissibility values.
-                int minCartIdx = std::min(cartIdxIn, cartIdxOut);
-                int maxCartIdx = std::max(cartIdxIn, cartIdxOut);
+                const auto& levelCartDimsIn = levelCartMapp.cartesianDimensions(levelIn);
+                const auto& levelCartDimsOut = levelCartMapp.cartesianDimensions(levelOut);
 
-                if (maxCartIdx - minCartIdx == 1 && cartDims[0] > 1 ) {
-                    tranx.template data<double>()[cartIdxIn] += leafTrans.transmissibility(leafIdxIn, leafIdxOut);
-                    continue;
+                // Two leaf cells that belong to two different level grids,
+                // have diffent 'origin' cell in level zero, if there is no nested refinement.
+                // In this case, their 'origin' cells have different Cartesian indices.
+                std::size_t cartIdxIn = cartMapp.cartesianIndex(leafIdxIn);
+                std::size_t cartIdxOut = cartMapp.cartesianIndex(leafIdxOut);
+
+                if ( cartIdxOut < cartIdxIn )
+                    std::swap(cartIdxIn, cartIdxOut);
+
+                if (isNumAquConn(cartIdxIn, cartIdxOut) || !isDirectNeighbours(cartIdxIn, cartIdxOut)) {
+                    // We need to check whether an NNC for this face was also
+                    // specified via the NNC keyword in the deck.
+                    auto t = leafTrans.transmissibility(leafIdxIn, leafIdxOut);
+                    auto candidate = std::lower_bound(nncData.begin(), nncData.end(),
+                                                      NNCdata { cartIdxIn, cartIdxOut, 0.0 });
+
+                    while ((candidate != nncData.end()) &&
+                           (candidate->cell1 == cartIdxIn) &&
+                           (candidate->cell2 == cartIdxOut))
+                    {
+                        t -= candidate->trans;
+                        ++candidate;
+                    }
+
+                    // ECLIPSE ignores NNCs with zero transmissibility
+                    // (different threshold than for NNC with corresponding
+                    // EDITNNC above).  In addition we do set small
+                    // transmissibilities to zero when setting up the simulator.
+                    // These will be ignored here, too.
+                    const auto tt = unitSystem
+                        .from_si(Opm::UnitSystem::measure::transmissibility, t);
+
+                    if (std::isnormal(tt) && (tt > 1.0e-12)) {
+                        // outputNNNS_levels.emplace_back(, cc2, t);
+                    }
                 }
-
-                if (maxCartIdx - minCartIdx == cartDims[0] && cartDims[1] > 1) {
-                    trany.template data<double>()[cartIdxIn] += leafTrans.transmissibility(leafIdxIn, leafIdxOut);
-                    continue;
-                }
-
-                if (maxCartIdx - minCartIdx == cartDims[0]*cartDims[1] ||
-                    directVerticalNeighbors(cartDims,
-                                            levelCartToLevelCompressed[/*level = */0],
-                                            minCartIdx,
-                                            maxCartIdx)) {
-
-                    tranz.template data<double>()[cartIdxIn] += leafTrans.transmissibility(leafIdxIn, leafIdxOut);
-                }
-            } // end-intersection-loop
-        } // end-element-loop
-    } // end-if-Grid==CpGrid
+            }
+        } // if-Grid==CpGrid
+    }
 }
 
 #endif // OPM_GRID_CPGRID_LGROUTPUTHELPERS_HEADER_INCLUDED
