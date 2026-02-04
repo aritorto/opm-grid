@@ -509,9 +509,9 @@ std::array<int,2> getParentFacesAssocWithNewRefinedCornLyingOnEdge(const Dune::c
     assert(newRefinedCornerLiesOnEdge(cells_per_dim, cornerIdxInLgr));
 
     const auto& parentCell_to_face = current_data.cellToFace(elemLgr);
-    if(parentCell_to_face.size()>6){
+    /* if(parentCell_to_face.size()>6){
         OPM_THROW(std::logic_error, "The associted parent cell has more than six faces. Refinment/Adaptivity not supported yet.");
-    }
+        }*/
     // Corners Order defined in Geometry::refine  (j*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + (i*(cells_per_dim[2]+1)) + k
     const auto& ijk = getRefinedCornerIJK(cells_per_dim, cornerIdxInLgr);
     // Edges laying on bottom face
@@ -593,9 +593,9 @@ int getParentFaceWhereNewRefinedCornerLiesOn(const Dune::cpgrid::CpGridData& cur
     assert(isRefinedNewBornCornerOnLgrBoundary(cells_per_dim, cornerIdxInLgr));
 
     const auto& parentCell_to_face = current_data.cellToFace(elemLgr);
-    if(parentCell_to_face.size()>6){
+    /*if(parentCell_to_face.size()>6){
         OPM_THROW(std::logic_error, "The associted parent cell has more than six faces. Refinment/Adaptivity not supported yet.");
-    }
+        }*/
     const auto& ijk = getRefinedCornerIJK(cells_per_dim, cornerIdxInLgr);
 
     bool isOnParentCell_I_FACEfalse_and_newBornCorn = ( (ijk[0] == 0) && ((ijk[1] % cells_per_dim[1] != 0) || (ijk[2] % cells_per_dim[2] !=0) ));
@@ -684,9 +684,9 @@ int replaceLgr1CornerIdxByLgr2CornerIdx(const Dune::cpgrid::CpGridData& current_
     const auto& ijkLgr1 = getRefinedCornerIJK(cells_per_dim_lgr1, cornerIdxLgr1);
     const auto& parentCell_to_face = current_data.cellToFace(elemLgr1);
 
-    if(parentCell_to_face.size()>6){
+    /*  if(parentCell_to_face.size()>6){
         OPM_THROW(std::logic_error, "The associated parent cell has more than six faces. Refinement/Adaptivity not supported yet.");
-    }
+        }*/
 
     // Order defined in Geometry::refine
     //  (j*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + (i*(cells_per_dim[2]+1)) + k
@@ -1166,9 +1166,9 @@ int getParentFaceWhereNewRefinedFaceLiesOn(const Dune::cpgrid::CpGridData& curre
     const auto& parentCell_to_face = current_data.cellToFace(elemLgr);
     // cell_to_face_ [ element ] = { I false, I true, J false, J true, K false, K true } if current leaf data is level zero
 
-    if(parentCell_to_face.size()>6){
+    /* if(parentCell_to_face.size()>6){
         OPM_THROW(std::logic_error, "The associated parent cell has more than six faces. Refinement/Adaptivity not supported yet.");
-    }
+        }*/
 
     // Order defined in Geometry::refine (to be used for distinguishing if faceIdxInLgr is K, I, or J face)
     //
@@ -1956,6 +1956,49 @@ void validStartEndIJKs(const std::vector<std::array<int,3>>& startIJK_vec,
     }
 }
 
+std::array<std::vector<int>,6> getBoundaryFaces(const std::array<int,3>& nxnynz)
+{
+    // SCR: SingleCellRefinement
+    const auto& [nx,ny,nz] = nxnynz;
+    // Auxiliary integers to simplify notation.
+    const int k_faces =  nx*ny*(nz+1); 
+    const int i_faces =  (nx+1)*ny*nz;
+
+    std::array<std::vector<int>,6> boundary_faces;
+   
+    boundary_faces[0].reserve(ny*nz); // I_FACE false 
+    boundary_faces[1].reserve(ny*nz); // I_FACE true 
+    boundary_faces[2].reserve(nx*nz); // J_FACE false 
+    boundary_faces[3].reserve(nx*nz); // J_FACE true
+    boundary_faces[4].reserve(nx*ny); // K_FACE false 
+    boundary_faces[5].reserve(nx*ny); // K_FACE true
+
+    // Order given in Geometry.hpp K, I, J (getIndicesFace(...))
+    // Boundary I_FACE faces
+    for (int j = 0; j < ny; ++j) {
+        for (int k = 0; k < nz; ++k) {
+            boundary_faces[0].push_back(k_faces + (k*ny) + j); // I_FACE false
+            boundary_faces[1].push_back(k_faces + (nx*ny*nz) + (k*ny) + j); // I_FACE true
+        }
+    }
+    // Boundary J_FACE faces
+    for (int i = 0; i < nx; ++i) {
+        for (int k = 0; k < nz; ++k) {
+            boundary_faces[2].push_back(k_faces + i_faces + (i*nz) + k); // J_FACE false
+            boundary_faces[3].push_back(k_faces + i_faces + (nx*ny*nz) + (i*nz) + k); // J_FACE true
+        }
+    }
+    // Boundary K_FACE faces
+    for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+            boundary_faces[4].push_back( (j*nx) + i ); // K_FACE false
+            boundary_faces[5].push_back( (nx*ny*nz) + (j*nx) + i ); // K_FACE true
+        }
+    }
+    return boundary_faces;
+}
+
+
 std::array<std::vector<int>,6> getBoundaryPatchFaces(const std::array<int,3>& startIJK,
                                                      const std::array<int,3>& endIJK,
                                                      const std::array<int,3>& grid_dim)
@@ -2014,6 +2057,7 @@ bool patchesShareFace(const std::vector<std::array<int,3>>& startIJK_vec,
 {
     assert(!startIJK_vec.empty());
     assert(!endIJK_vec.empty());
+
     if ((startIJK_vec.size() == 1) && (endIJK_vec.size() == 1)){
         return false;
     }
@@ -2271,6 +2315,285 @@ void containsEightDifferentCorners(const std::array<int,8>& cell_to_point)
         OPM_THROW(std::logic_error, "Cell has " + std::to_string(nonRepeatedCorners.size()) + " vertices, required: 8.");
     }
 }
+
+std::array<std::vector<int>, 6> classifyAndCollectFaceIndices(const Dune::cpgrid::CpGridData& currentLeafData,
+                                                              const Dune::cpgrid::Entity<0>& element)
+{
+    std::array<std::vector<int>, 6> classified_face_idxs{};
+    // clasified_face_idxs[0] stores I false face indices
+    // clasified_face_idxs[1] stores I true  face indices
+    // clasified_face_idxs[2] stores J false face indices
+    // clasified_face_idxs[3] stores J true  face indices
+    // clasified_face_idxs[4] stores K false face indices
+    // clasified_face_idxs[5] stores K true  face indices
+
+    const auto& cell_to_face = currentLeafData.cellToFace(element.index());
+
+    for (int i = 0; i < 6; ++i){
+        classified_face_idxs[i].reserve(cell_to_face.size()); // more than needed
+    }
+    
+   
+    for (const auto& face : cell_to_face) {
+        const auto tag = currentLeafData.faceTag(face.index());
+        const bool orientation = face.orientation();
+        if ((tag == I_FACE) && !orientation) {
+            classified_face_idxs[0].push_back(face.index());
+        }
+        else if ((tag == I_FACE) && orientation) {
+            classified_face_idxs[1].push_back(face.index());
+        }
+        else if ((tag == J_FACE) && !orientation) {
+            classified_face_idxs[2].push_back(face.index());
+        }
+        else if ((tag == J_FACE) && orientation) {
+            classified_face_idxs[3].push_back(face.index());
+        }
+        else if ((tag == K_FACE) && !orientation) {
+            classified_face_idxs[4].push_back(face.index());
+        }
+        else if ((tag == K_FACE) && orientation) {
+            classified_face_idxs[5].push_back(face.index());
+        }
+        else {
+            std::cout<< "why are we here?" << std::endl;
+        }
+    }
+    return classified_face_idxs;
+}
+
+
+
+std::set<int> hangingNodesIndices(const Dune::cpgrid::CpGridData& coarserCpData,
+                                  const Dune::cpgrid::CpGridData& finerCpData,
+                                  const Dune::cpgrid::Entity<0>& element,
+                                  const std::array<int,3>& cells_per_dim,
+                                  std::vector<std::tuple<int,std::vector<int>>>& parent_to_children_faces,
+                                  std::vector<std::array<int,2>>& child_to_parent_faces)
+{
+
+    const auto& parentCellFaces = coarserCpData.cellToFace(element.index());
+    const auto& parentCellPoints = coarserCpData.cellToPoint(element.index());
+
+     for (const auto& face : parentCellFaces) {
+
+      
+        
+        const auto tag = coarserCpData.faceTag(face.index());
+        const bool orientation = face.orientation();
+
+        std::cout<< "Parent cell face index: " << face.index() <<  ", orient: " << orientation << ", tag: " << tag<< std::endl;
+     }
+     
+    
+    
+
+
+
+    const auto classified_parentCell_faces = classifyAndCollectFaceIndices(coarserCpData, element);
+    
+    
+    const auto classified_boundary_refinedFaces = getBoundaryFaces(/* nxnynz = */ cells_per_dim);
+    //  classified_boundary_refinedFaces =
+    //   K false, K true, I false, I true, J false, J true
+
+    std::cout<< classified_boundary_refinedFaces[0].size() << " I false boundary single cell ref" << std::endl;
+    std::cout<< classified_boundary_refinedFaces[1].size() << " I true boundary single cell ref" << std::endl;
+    std::cout<< classified_boundary_refinedFaces[2].size() << " J false boundary single cell ref" << std::endl;
+    std::cout<< classified_boundary_refinedFaces[3].size() << " J true boundary single cell ref" << std::endl;
+    std::cout<< classified_boundary_refinedFaces[4].size() << " K false boundary single cell ref" << std::endl;
+    std::cout<< classified_boundary_refinedFaces[5].size() << " K true boundary single cell ref" << std::endl;
+    
+    for (const auto& ifalse : classified_boundary_refinedFaces[0])
+    {
+        std::cout<< "soy una iFalse face " << ifalse << std::endl;
+    }
+    
+   
+    
+
+    std::set<int> hangingNodes{};
+    
+    for (const auto& face : parentCellFaces) {
+
+      
+        
+        const auto tag = coarserCpData.faceTag(face.index());
+        const bool orientation = face.orientation();
+
+        std::cout<< "Parent cell face index: " << face.index() <<  ", orient: " << orientation << ", tag: " << tag<< std::endl;
+
+        int faceType = 0; 
+        // parentFaceType = 0 ->  I false,
+        // parentFaceType = 1 -> I true,
+        // parentFaceType = 2 -> J false,
+        // parentFaceType = 3 -> J true,
+        // parentFaceType = 4 -> K false,
+        // parentFaceType = 5 -> K true
+        
+        
+        if ((tag == I_FACE) && !orientation) {
+            faceType = 0;
+        }
+        else  if ((tag == I_FACE) && orientation) {
+            faceType = 1;
+        }
+        else  if ((tag == J_FACE) && !orientation) {
+           faceType = 2;
+        }
+        else  if ((tag == J_FACE) && orientation) {
+          faceType = 3;
+        }
+        else  if ((tag == K_FACE) && !orientation) {
+           faceType = 4;
+        }
+        else  if ((tag == K_FACE) && orientation) {
+           faceType = 5;
+        }
+
+        if (classified_parentCell_faces[faceType].size() == 1)
+            continue;
+
+        const auto& face_to_point = coarserCpData.faceToPoint(face.index());
+        assert(face_to_point.size() == 4);
+
+        //    2 --- 3
+        //    |     |
+        //    0 --- 1
+
+        const auto c0 =  coarserCpData.vertexPosition(face_to_point[0]);
+        const auto c1 =  coarserCpData.vertexPosition(face_to_point[1]);
+        const auto c2 =  coarserCpData.vertexPosition(face_to_point[2]);
+        const auto c3 =  coarserCpData.vertexPosition(face_to_point[3]);
+
+        std::cout<< "Face tag:" << tag << std::endl;
+        
+      
+        std::cout<< c0[0] << " " << c0[1] << " " << c0[2] << " c0" <<std::endl;
+         std::cout<< c1[0] << " " << c1[1] << " " << c1[2] << " c1" <<std::endl;
+          std::cout<< c2[0] << " " << c2[1] << " " << c2[2] << " c2" <<std::endl;
+          std::cout<< c3[0] << " " << c3[1] << " " << c3[2] << " c3" <<std::endl;
+          std::cout<< " " << std::endl;
+        
+        
+
+        for (const auto& b_refinedFace : classified_boundary_refinedFaces[faceType]) {
+            std::cout<< faceType << " boundaFaceType" << std::endl;
+           
+            const auto& b_refinedFace_to_point = finerCpData.faceToPoint(b_refinedFace);
+            assert(b_refinedFace_to_point.size() == 4);
+
+            // Reorder the corners of the refined cell in counter-clockwise as the coarser face
+            const auto f0 =  finerCpData.vertexPosition(b_refinedFace_to_point[0]);
+            const auto f1 =  finerCpData.vertexPosition(b_refinedFace_to_point[1]);
+            const auto f2 =  finerCpData.vertexPosition(b_refinedFace_to_point[3]); /** Warning! Internal order differs */
+            const auto f3 =  finerCpData.vertexPosition(b_refinedFace_to_point[2]);
+
+             if (tag == 0)
+        {
+        std::cout<< f0[0] << " " << f0[1] << " " << f0[2] << " f0" <<std::endl;
+         std::cout<< f1[0] << " " << f1[1] << " " << f1[2] << " f1" <<std::endl;
+          std::cout<< f2[0] << " " << f2[1] << " " << f2[2] << " f2" <<std::endl;
+          std::cout<< f3[0] << " " << f3[1] << " " << f3[2] << " f3" <<std::endl;
+        }
+        
+
+
+            if (coarserFaceContainsFinerFace(c0,c1,c2,c3,f0,f1,f2,f3, tag)){
+                std::cout<< "include me: " << b_refinedFace << std::endl;
+            }
+
+            // in wonderland... 
+            // if boundFaceType is 0 or 1 -> K false/true -> check x,y
+            // if boundFaceType is 2 or 3 -> I false/true -> check y,z
+            // if boundFaceType is 4 or 5 -> J false/true -> check x,z
+            bool isOutTheBox = false;
+            
+            if ((faceType == 0) || (faceType == 1)) { // I false, I true -> check y,z
+                bool f0IsOut = (f0[1]> c2[1]) || (f0[1]<c0[1]) || (f0[2]> c2[2]) || (f0[2]<c0[2]);
+                bool f1IsOut = (f1[1]> c3[1]) || (f1[1]<c1[1]) || (f1[2]> c3[2]) || (f1[2]<c1[2]);
+                bool f2IsOut = (f2[1]> c2[1]) || (f2[1]<c0[1]) || (f2[2]> c2[2]) || (f2[2]<c0[2]);
+                bool f3IsOut = (f3[1]> c3[1]) || (f3[1]<c1[1]) || (f3[2]> c3[2]) || (f3[2]<c1[2]);
+                isOutTheBox = f0IsOut && f1IsOut && f2IsOut && f3IsOut;
+            }
+            else if ((faceType == 2) || (faceType == 3)) { // J false, J true -> check x,z 
+                bool f0IsOut = (f0[0]> c2[0]) || (f0[0]<c0[0]) || (f0[2]> c2[2]) || (f0[2]<c0[2]);
+                bool f1IsOut = (f1[0]> c3[0]) || (f1[0]<c1[0]) || (f1[2]> c3[2]) || (f1[2]<c1[2]);
+                bool f2IsOut = (f2[0]> c2[0]) || (f2[0]<c0[0]) || (f2[2]> c2[2]) || (f2[2]<c0[2]);
+                bool f3IsOut = (f3[0]> c3[0]) || (f3[0]<c1[0]) || (f3[2]> c3[2]) || (f3[2]<c1[2]);
+                isOutTheBox = f0IsOut && f1IsOut && f2IsOut && f3IsOut;
+            }
+            else if ((faceType == 4) || (faceType == 5)) { // K false, K true -> check x,y 
+                bool f0IsOut = (f0[1]> c2[1]) || (f0[1]<c0[1]) || (f0[2]> c2[2]) || (f0[2]<c0[2]);
+                bool f1IsOut = (f1[1]> c3[1]) || (f1[1]<c1[1]) || (f1[2]> c3[2]) || (f1[2]<c1[2]);
+                bool f2IsOut = (f2[1]> c2[1]) || (f2[1]<c0[1]) || (f2[2]> c2[2]) || (f2[2]<c0[2]);
+                bool f3IsOut = (f3[1]> c3[1]) || (f3[1]<c1[1]) || (f3[2]> c3[2]) || (f3[2]<c1[2]);
+                isOutTheBox = f0IsOut && f1IsOut && f2IsOut && f3IsOut;
+            }
+            
+            if (isOutTheBox) {
+                std::cout << "got you! " << b_refinedFace << " removed this one!" <<std::endl;
+
+                std::cout<< f0[0] << " " << f0[1] << " " << f0[2] << std::endl;
+                std::cout<< f1[0] << " " << f1[1] << " " << f1[2] << std::endl;
+                std::cout<< f2[0] << " " << f2[1] << " " << f2[2] << std::endl;
+                std::cout<< f3[0] << " " << f3[1] << " " << f3[2] << std::endl;
+
+                for (auto& [faceIdx, childrenList] : parent_to_children_faces) {
+                   
+                    if (faceIdx != face.index())
+                        continue;
+
+                    assert(face.index() == faceIdx);
+
+                    auto it = std::find(childrenList.begin(), childrenList.end(), b_refinedFace);
+                    if (it != childrenList.end()) {
+                        childrenList.erase(it);
+                    }
+                }
+                // remove "wrong" parent face from child/refined face
+                auto itRef = std::find(child_to_parent_faces.begin(), child_to_parent_faces.end(), std::array{b_refinedFace, face.index()});
+                if (itRef != child_to_parent_faces.end()) {
+                    child_to_parent_faces.erase(itRef);
+                }
+            }
+            
+
+            pointBelongsToSegment(c0,c2,f0);
+            pointBelongsToSegment(c0,c2,f2);
+
+            pointBelongsToSegment(c0,c1,f0);
+            pointBelongsToSegment(c0,c1,f1);
+
+            pointBelongsToSegment(c2,c3,f2);
+            pointBelongsToSegment(c2,c3,f3);
+
+            pointBelongsToSegment(c1,c3,f1);
+            pointBelongsToSegment(c1,c3,f3);
+
+        }
+        
+      
+        
+        for (int i = 0; i < 4; ++i) {
+            
+            int pointIdx  = coarserCpData.faceVertex(face.index(), i);
+            
+            if (std::find(parentCellPoints.begin(), parentCellPoints.end(), pointIdx) == parentCellPoints.end() ) {
+                hangingNodes.insert(pointIdx);
+            }                                  
+        }
+    }
+
+    for (const auto& [faceIdx, refinedFaces] : parent_to_children_faces)
+    {
+        std::cout<< faceIdx << " parent-face has now associated " << refinedFaces.size() << " refined faces." << std::endl;
+    }
+    
+    return hangingNodes;
+}
+
+
 
 } // namespace Lgr
 } // namespace Opm

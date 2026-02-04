@@ -700,6 +700,9 @@ std::array<std::vector<int>,6> getBoundaryPatchFaces(const std::array<int,3>& st
                                                      const std::array<int,3>& endIJK,
                                                      const std::array<int,3>& grid_dim);
 
+std::array<std::vector<int>,6> getBoundaryFaces(const std::array<int,3>& nxnynz);
+
+
 /// @brief Compute amount of cells in each direction of a patch of cells. (Cartesian grid required).
 ///
 /// @param [in]  startIJK  Cartesian triplet index where the patch starts.
@@ -774,6 +777,166 @@ bool compatibleSubdivisions(const std::vector<std::array<int,3>>& cells_per_dim_
                             const std::array<int,3>& logicalCartesianSize);
 
 void containsEightDifferentCorners(const std::array<int,8>& cell_to_point);
+
+template <class LeafView>
+int countIntersections(const LeafView& leafView,
+                       const Dune::cpgrid::Entity<0>& element)
+{
+    int intersection_count = 0;
+    for ([[maybe_unused]]const auto& intersection : Dune::intersections(leafView, element)){   
+        ++intersection_count;
+    }
+    return intersection_count;
+}
+
+std::array<std::vector<int>, 6> classifyAndCollectFaceIndices(const Dune::cpgrid::CpGridData& currentLeafData,
+                                                              const Dune::cpgrid::Entity<0>& element);
+
+template<typename PointType>
+bool pointBelongsToSegment(const PointType& startSegment, const PointType& endSegment, const PointType& point)
+{
+
+    const auto vx = endSegment[0] - startSegment[0];
+    const auto vy = endSegment[1] - startSegment[1];
+    const auto vz = endSegment[2] - startSegment[2];
+
+    const auto wx = point[0] - startSegment[0];
+    const auto wy = point[1] - startSegment[1];
+    const auto wz = point[2] - startSegment[2];
+    
+ return (std::abs(vy*wz - vz*wy) < 1e-12) && (std::abs(vz*wx - vx*wz) < 1e-12) && (std::abs(vx*wy - vy*wx) < 1e-12);
+}
+
+template<typename PointType>
+bool isContained(const PointType& vertex, int constDirection, double min1, double max1, double min2, double max2)
+{
+    if (constDirection == 0) { // vertex lying on I_FACE
+        return (vertex[1] >= min1) && (vertex[1] <= max1) && (vertex[2] >= min2) && (vertex[2] <= max2);
+    }
+    else if(constDirection == 1) { // vertex lying on J_FACE
+        return (vertex[0] >= min1) && (vertex[0] <= max1) && (vertex[2] >= min2) && (vertex[2] <= max2);
+    }
+    else if(constDirection == 2) { // vertex lying on K_FACE
+        return (vertex[0] >= min1) && (vertex[0] <= max1) && (vertex[1] >= min2) && (vertex[1] <= max2);
+    }
+    return false;
+}
+
+template<typename PointType>
+bool coarserFaceContainsFinerFace(const PointType& c0, const PointType& c1, const PointType& c2, const PointType& c3,
+                                  const PointType& f0, const PointType& f1, const PointType& f2, const PointType& f3,
+                                  int tag)
+{
+    // faceTag 0 (I_FACE), 1 (J_FACE), 2 (K_FACE)
+            
+    if (tag == 0) { // I false, I true -> check y,z
+
+        const auto minY = std::min(c0[1], c3[1]);
+        const auto maxY = std::max(c1[1], c2[1]);
+   
+        const auto minZ = std::min(c0[2], c1[2]);
+        const auto maxZ = std::max(c2[2], c3[2]);
+        
+        bool f0In = isContained(f0, 0, minY, maxY, minZ, maxZ); //(f0[1] >= minY) && (f0[1] <= maxY) && (f0[2] >= minZ) && (f0[2] <= maxZ);
+        bool f1In = (f1[1] >= minY) && (f1[1] <= maxY) && (f1[2] >= minZ) && (f1[2] <= maxZ);
+        bool f2In = (f2[1] >= minY) && (f2[1] <= maxY) && (f2[2] >= minZ) && (f2[2] <= maxZ);
+        bool f3In = (f3[1] >= minY) && (f3[1] <= maxY) && (f3[2] >= minZ) && (f3[2] <= maxZ);
+
+        return f0In && f1In && f2In && f3In;
+    }
+    else if (tag == 1) { // J false, J true -> check x,z
+        
+        const auto minX = std::min(c0[0], c3[0]);
+        const auto maxX = std::max(c1[0], c2[0]);
+   
+        const auto minZ = std::min(c0[2], c1[2]);
+        const auto maxZ = std::max(c2[2], c3[2]);
+        
+        bool f0In = (f0[0] >= minX) && (f0[0] <= maxX) && (f0[2] >= minZ) && (f0[2] <= maxZ);
+        bool f1In = (f1[0] >= minX) && (f1[0] <= maxX) && (f1[2] >= minZ) && (f1[2] <= maxZ);
+        bool f2In = (f2[0] >= minX) && (f2[0] <= maxX) && (f2[2] >= minZ) && (f2[2] <= maxZ);
+        bool f3In = (f3[0] >= minX) && (f3[0] <= maxX) && (f3[2] >= minZ) && (f3[2] <= maxZ);
+
+        return f0In && f1In && f2In && f3In;
+    }
+    else if (tag == 2) { // K false, K true -> check x,y
+        const auto minX = std::min(c0[0], c3[0]);
+        const auto maxX = std::max(c1[0], c2[0]);
+   
+        const auto minY = std::min(c0[1], c1[1]);
+        const auto maxY = std::max(c2[1], c3[1]);
+        
+        bool f0In = (f0[0] >= minX) && (f0[0] <= maxX) && (f0[1] >= minY) && (f0[1] <= maxY);
+        bool f1In = (f1[0] >= minX) && (f1[0] <= maxX) && (f1[1] >= minY) && (f1[1] <= maxY);
+        bool f2In = (f2[0] >= minX) && (f2[0] <= maxX) && (f2[1] >= minY) && (f2[1] <= maxY);
+        bool f3In = (f3[0] >= minX) && (f3[0] <= maxX) && (f3[1] >= minY) && (f3[1] <= maxY);
+
+        return f0In && f1In && f2In && f3In;
+    }
+    return false;
+}
+
+
+template<typename PointType>
+bool finerFaceCompletlyOutCoarserFace(const PointType& c0, const PointType& c1, const PointType& c2, const PointType& c3,
+                                      const PointType& f0, const PointType& f1, const PointType& f2, const PointType& f3,
+                                      int tag)
+{
+    // faceTag 0 (I_FACE), 1 (J_FACE), 2 (K_FACE)
+            
+    if (tag == 0) { // I false, I true -> check y,z
+
+        const auto minY = std::min(c0[1], c2[1]);
+        const auto maxY = std::max(c1[1], c3[1]);
+   
+        const auto minZ = std::min(c0[2], c1[2]);
+        const auto maxZ = std::max(c2[2], c3[2]);
+        
+        bool f0In = (f0[1] >= minY) && (f0[1] <= maxY) && (f0[2] >= minZ) || (f0[2] <= maxZ);
+        bool f1In = (f1[1] >= minY) && (f1[1] <= maxY) && (f1[2] >= minZ) || (f1[2] <= maxZ);
+        bool f2In = (f2[1] >= minY) && (f2[1] <= maxY) && (f2[2] >= minZ) || (f2[2] <= maxZ);
+        bool f3In = (f3[1] >= minY) && (f3[1] <= maxY) && (f3[2] >= minZ) || (f3[2] <= maxZ);
+
+        return f0In && f1In && f2In && f3In;
+    }
+    else if (tag == 1) { // J false, J true -> check x,z
+        
+        const auto minX = std::min(c0[0], c2[0]);
+        const auto maxX = std::max(c1[0], c3[0]);
+   
+        const auto minZ = std::min(c0[2], c1[2]);
+        const auto maxZ = std::max(c2[2], c3[2]);
+        
+        bool f0In = (f0[0] >= minX) && (f0[0] <= maxX) && (f0[2] >= minZ) || (f0[2] <= maxZ);
+        bool f1In = (f1[0] >= minX) && (f1[0] <= maxX) && (f1[2] >= minZ) || (f1[2] <= maxZ);
+        bool f2In = (f2[0] >= minX) && (f2[0] <= maxX) && (f2[2] >= minZ) || (f2[2] <= maxZ);
+        bool f3In = (f3[0] >= minX) && (f3[0] <= maxX) && (f3[2] >= minZ) || (f3[2] <= maxZ);
+
+        return f0In && f1In && f2In && f3In;
+    }
+    else if (tag == 2) { // K false, K true -> check x,y
+        const auto minX = std::min(c0[0], c2[0]);
+        const auto maxX = std::max(c1[0], c3[0]);
+   
+        const auto minY = std::min(c0[1], c1[1]);
+        const auto maxY = std::max(c2[1], c3[1]);
+        
+        bool f0In = (f0[0] >= minX) && (f0[0] <= maxX) && (f0[1] >= minY) || (f0[1] <= maxY);
+        bool f1In = (f1[0] >= minX) && (f1[0] <= maxX) && (f1[1] >= minY) || (f1[1] <= maxY);
+        bool f2In = (f2[0] >= minX) && (f2[0] <= maxX) && (f2[1] >= minY) || (f2[1] <= maxY);
+        bool f3In = (f3[0] >= minX) && (f3[0] <= maxX) && (f3[1] >= minY) || (f3[1] <= maxY);
+
+        return f0In && f1In && f2In && f3In;
+    }          
+}
+
+
+std::set<int> hangingNodesIndices(const Dune::cpgrid::CpGridData& coarserCpData,
+                                   const Dune::cpgrid::CpGridData& finerCpData,
+                                  const Dune::cpgrid::Entity<0>& element,
+                                  const std::array<int,3>& cells_per_dim,
+                                  std::vector<std::tuple<int,std::vector<int>>>& parent_to_children_faces,
+                                  std::vector<std::array<int,2>>& child_to_parent_faces);
 
 } // namespace Lgr
 } // namespace Opm
