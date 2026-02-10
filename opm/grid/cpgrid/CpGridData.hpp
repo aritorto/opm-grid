@@ -364,6 +364,16 @@ public:
         return face_to_point_[faceIdx];
     }
 
+    const Dune::FieldVector<double,3>& vertexPosition(int vertex) const
+    {
+        return this->geomVector<3>()[cpgrid::EntityRep<3>(vertex, true)].center();
+    }
+
+    int faceVertex(int face, int local_index) const
+    {
+        return this->face_to_point_[face][local_index];
+    }
+
     int numFaces() const
     {
         return face_to_cell_.size();

@@ -775,6 +775,43 @@ bool compatibleSubdivisions(const std::vector<std::array<int,3>>& cells_per_dim_
 
 void containsEightDifferentCorners(const std::array<int,8>& cell_to_point);
 
+template <class LeafView>
+int countIntersections(const LeafView& leafView,
+                       const Dune::cpgrid::Entity<0>& element)
+{
+    int intersection_count = 0;
+    for ([[maybe_unused]]const auto& intersection : Dune::intersections(leafView, element)){   
+        ++intersection_count;
+    }
+    return intersection_count;
+}
+
+std::array<std::vector<int>, 6> classifyAndCollectFaceIndices(const Dune::cpgrid::CpGridData& currentLeafData,
+                                                              const Dune::cpgrid::Entity<0>& element);
+
+template<typename PointType>
+bool pointBelongsToSegment(const PointType& startSegment, const PointType& endSegment, const PointType& point)
+{
+
+    const auto vx = endSegment[0] - startSegment[0];
+    const auto vy = endSegment[1] - startSegment[1];
+    const auto vz = endSegment[2] - startSegment[2];
+
+    const auto wx = point[0] - startSegment[0];
+    const auto wy = point[1] - startSegment[1];
+    const auto wz = point[2] - startSegment[2];
+    
+ return (std::abs(vy*wz - vz*wy) < 1e-12) && (std::abs(vz*wx - vx*wz) < 1e-12) && (std::abs(vx*wy - vy*wx) < 1e-12);
+}
+
+
+std::set<int> hangingNodesIndices(const Dune::cpgrid::CpGridData& coarserCpData,
+                                   const Dune::cpgrid::CpGridData& finerCpData,
+                                  const Dune::cpgrid::Entity<0>& element,
+                                  const std::array<int,3>& cells_per_dim,
+                                  std::vector<std::tuple<int,std::vector<int>>>& parent_to_children_faces,
+                                  std::vector<std::array<int,2>>& child_to_parent_faces);
+
 } // namespace Lgr
 } // namespace Opm
 

@@ -1819,10 +1819,13 @@ CpGridData::refineSingleCell(const std::array<int,3>& cells_per_dim, const int& 
         {parent_to_point[7], (cells_per_dim[1]*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + (cells_per_dim[0]*(cells_per_dim[2]+1))
          + cells_per_dim[2]}};
     // Get parent_cell_to_face = { {face, orientation}, {another face, its orientation}, ...}.
-    const auto& parent_cell_to_face = (this-> cell_to_face_[EntityRep<0>(parent_idx, true)]);
+    const auto& parentCell_to_face = (this-> cell_to_face_[EntityRep<0>(parent_idx, true)]);
+
+    assert(parentCell_to_face.size() >= 6);
+    
     // To store relation old-face to new-born-faces (children faces).
     std::vector<std::tuple<int,std::vector<int>>>  parent_to_children_faces;
-    parent_to_children_faces.reserve(6);
+    parent_to_children_faces.reserve(6); // I false/true, J false/true, K false/true 
     // To store child-to-parent-face relation. Child-faces ordered with the criteria introduced in refine()(Geometry.hpp)K,I,Jfaces.
     std::vector<std::array<int,2>> child_to_parent_faces;
     child_to_parent_faces.reserve(refined_face_to_cell.size());
@@ -1830,7 +1833,7 @@ CpGridData::refineSingleCell(const std::array<int,3>& cells_per_dim, const int& 
     const int& k_faces = cells_per_dim[0]*cells_per_dim[1]*(cells_per_dim[2]+1);
     const int& i_faces = (cells_per_dim[0]+1)*cells_per_dim[1]*cells_per_dim[2];
     // Populate parent_to_children_faces and child_to_parent_faces.
-    for (const auto& face : parent_cell_to_face) {
+    for (const auto& face : parentCell_to_face) {
         // Check face tag to identify the type of face (bottom, top, left, right, front, or back).
         const auto& parent_face_tag = (this-> face_tag_[Dune::cpgrid::EntityRep<1>(face.index(), true)]);
         // To store the new born faces for each face.
@@ -1883,6 +1886,7 @@ CpGridData::refineSingleCell(const std::array<int,3>& cells_per_dim, const int& 
         } // if-J_FACE
         parent_to_children_faces.push_back(std::make_tuple(face.index(), children_faces));
     }
+    
     std::tuple<int, std::vector<int>> parent_to_children_cells; // {parent cell index (in level0), {child0,...,childN (in level1)}}
     auto& [ parent_index, children_cells ] = parent_to_children_cells;
     children_cells.reserve(cells_per_dim[0]*cells_per_dim[1]*cells_per_dim[2]);
@@ -1894,6 +1898,32 @@ CpGridData::refineSingleCell(const std::array<int,3>& cells_per_dim, const int& 
         children_cells.push_back(cell);
         child_to_parent_cell.push_back({cell, parent_idx});
     }
+
+    /** In the case that parent cell has more than six intersection, some corrections and additions need to be done. */
+    const auto classified_parent_faces = Opm::Lgr::classifyAndCollectFaceIndices(*this,  Entity<0>(*this, parent_idx, true));
+    // {0,1,2,3,4,5} maps to {I false, I true, J false, J true, K false, K true}
+    if (parentCell_to_face.size()>6) {
+        for (int faceType = 0; faceType < 6; ++faceType) {
+            
+            if (classified_parent_faces[faceType].size() == 1)
+                continue; // nothing to correct here
+
+            std::cout<< "hola, this face needs helps: " << faceType << std::endl;
+            const auto hangingNodes = Opm::Lgr::hangingNodesIndices(*this,
+                                                                    *refined_grid_ptr,
+                                                                    Entity<0>(*this, parent_idx, true),
+                                                                    cells_per_dim,
+                                                                    parent_to_children_faces,
+                                                                    child_to_parent_faces);
+            for (const auto& hn : hangingNodes)
+            {
+                std::cout<< "please add me: " << hn << std::endl;
+            }
+            
+        }
+    }
+
+    
     return {refined_grid_ptr, parent_to_refined_corners, parent_to_children_faces, parent_to_children_cells,
             child_to_parent_faces, child_to_parent_cell};
 }

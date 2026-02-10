@@ -1777,7 +1777,7 @@ bool CpGrid::mark(int refCount, const cpgrid::Entity<0>& element, bool throwOnFa
     // Throw if element has a neighboring cell from a different level.
     // E.g., a coarse cell touching the boundary of an LGR, or
     // a refined cell with a coarser/finner neighboring cell.
-    /* for (const auto& intersection : Dune::intersections(leafGridView(), element)){
+    for (const auto& intersection : Dune::intersections(leafGridView(), element)){
         if (intersection.neighbor() && (intersection.outside().level() != element.level()) && (element.level()==0)) {
             // Refinement of cells at LGR boundaries is not supported, yet.
             if (throwOnFailure)
@@ -1785,7 +1785,7 @@ bool CpGrid::mark(int refCount, const cpgrid::Entity<0>& element, bool throwOnFa
             else
                 return false;
         }
-        }*/
+    }
     // For serial run, mark elements also in the level they were born.
     std::optional<bool> mark0;
     if(currentData().size()>1) {
