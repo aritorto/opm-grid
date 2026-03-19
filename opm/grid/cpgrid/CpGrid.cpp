@@ -2636,13 +2636,16 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
                                                                                        endIJK_vec,
                                                                                        lgr_name_vec,
                                                                                        parent_grid_names);
-    if (filtered_cells_per_dim_vec.size() == 0) { // if all LGRs expect 1 child per direction, then no refinement will be done.
+
+    auto noActualRefinement = comm().max(filtered_cells_per_dim_vec.size() == 0); // 1 when at least one process returns true (LGR no actual refinement).
+    if(noActualRefinement) { // if all LGRs expect 1 child per direction, then no refinement will be done.
         return;
     }
 
-    if (!Opm::areParentGridsAvailableBeforeTheirLgrs(getLgrNameToLevel(),
-                                                     filtered_lgr_name_vec,
-                                                     filtered_lgr_parent_grid_name_vec)) {
+    auto parentGridAvailable = comm().min(Opm::areParentGridsAvailableBeforeTheirLgrs(getLgrNameToLevel(),
+                                                                                      filtered_lgr_name_vec,
+                                                                                      filtered_lgr_parent_grid_name_vec)); // 0 when at least one process returns false (parent grid not available).
+    if (!parentGridAvailable) {
         OPM_THROW(std::invalid_argument, "Parent grid (name) must exist before its LGRs.");
     }
 
