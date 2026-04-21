@@ -512,9 +512,11 @@ public:
     /// @return parent_to_children_faces          For each parent face, we store its child-face indices.
     ///                                           {parent face index in coarse level, {indices of its children in refined level}}
     std::tuple< const std::shared_ptr<CpGridData>,
-                const std::vector<std::array<int,2>>,                  // parent_to_refined_corners(~boundary_old_to_new_corners)
                 const std::vector<std::tuple<int,std::vector<int>>> >  // parent_to_children_faces (~boundary_old_to_new_faces)
-    refineSingleCell(const std::array<int,3>& cells_per_dim, const int& parent_idx) const;
+    refineSingleCell(const std::array<int,3>& cells_per_dim,
+                     const int& parent_idx,
+                     std::vector<std::vector<std::array<int,2>>>& parentGridVertex_to_singleCellRefVertex,
+                     std::map<std::array<int,2>,int>& markedElemAndEquivRefinedCorn_to_corner) const;
 
     // @breif Compute center of an entity/element/cell in the Eclipse way:
     //        - Average of the 4 corners of the bottom face.

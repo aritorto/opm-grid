@@ -1782,10 +1782,22 @@ bool CpGridData::hasNNCs(const std::vector<int>& cellIndices) const
 }
 
 std::tuple< const std::shared_ptr<CpGridData>,
-            const std::vector<std::array<int,2>>,                 // parent_to_refined_corners(~boundary_old_to_new_corners)
             const std::vector<std::tuple<int,std::vector<int>>> > // parent_to_children_faces (~boundary_old_to_new_faces)
-CpGridData::refineSingleCell(const std::array<int,3>& cells_per_dim, const int& parent_idx) const
+CpGridData::refineSingleCell(const std::array<int,3>& cells_per_dim,
+                             const int& parent_idx,
+                             std::vector<std::vector<std::array<int,2>>>& parentGridVertex_to_singleCellRefVertex,
+                             std::map<std::array<int,2>,int>& markedElemAndEquivRefinedCorn_to_corner) const
 {
+    // parentGridVertex_to_singleCellRefVertex.resize(this->size(3)); // grid vertices not related to the parent cell
+    // have an empty vector as an entry. Vertices that are the 8-corners of the parent cells, or vertices that
+    // are corners of an intersection of the parent cell that are not part of the set of 8 corners of the
+    // parentCell_to_point_ and coincide with one of the vertices of the single cell refinement, must appear here.
+    // Example:
+    // Vertex with index verexIdx appear in the single-cell-refinement of parent cell with index elemIdx1 and elemIdx2.
+    // Then, 
+    // parentGridVertex_to_singleCEllRefVerex[ vertexIdx ] = { {elemIdx1, equivVertexIdx in singleCellRefElemIdx1},
+    //                                                         {elemIdx2, equivVertexIdx in singleCellRefElemIdx2} } 
+    
     // To store the LGR/refined-grid.
     std::vector<std::shared_ptr<CpGridData>> refined_data;
     std::shared_ptr<CpGridData> refined_grid_ptr = std::make_shared<CpGridData>(refined_data); // ccobj_
@@ -1797,35 +1809,52 @@ CpGridData::refineSingleCell(const std::array<int,3>& cells_per_dim, const int& 
     cpgrid::OrientedEntityTable<1,0>& refined_face_to_cell = refined_grid.face_to_cell_;
     cpgrid::EntityVariable<enum face_tag,1>& refined_face_tags = refined_grid.face_tag_;
     cpgrid::SignedEntityVariable<Dune::FieldVector<double,3>,1>& refined_face_normals = refined_grid.face_normals_;
-    // Get parent cell
+   
     const cpgrid::Geometry<3,3>& parent_cell = (*(geometry_.geomVector(std::integral_constant<int,0>())))[EntityRep<0>(parent_idx, true)];
-    // Get parent cell corners.
-    const auto& parent_to_point = this->cell_to_point_[parent_idx];
-    Opm::Lgr::containsEightDifferentCorners(parent_to_point);
+    const auto& parentCell_to_point = this->cell_to_point_[parent_idx];
+    Opm::Lgr::containsEightDifferentCorners(parentCell_to_point);
     // Refine parent cell
     parent_cell.refineCellifiedPatch(cells_per_dim, refined_geometries, refined_cell_to_point, refined_cell_to_face,
                                      refined_face_to_point, refined_face_to_cell, refined_face_tags, refined_face_normals,
                                      {1,1,1}, /*widthX, lengthY, heightZ*/ {1.}, {1.}, {1.});
-    const std::vector<std::array<int,2>>& parent_to_refined_corners{
-        // corIdx (J*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + (I*(cells_per_dim[2]+1)) +K
-        // replacing parent-cell corner '0' {0,0,0}
-        {parent_to_point[0], 0},
-        // replacing parent-cell corner '1' {cells_per_dim[0], 0, 0}
-        {parent_to_point[1], cells_per_dim[0]*(cells_per_dim[2]+1)},
-        // replacing parent-cell corner '2' {0, cells_perd_dim[1], 0}
-        {parent_to_point[2], cells_per_dim[1]*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)},
-        // replacing parent-cell corner '3' {cells_per_dim[0], cells_per_dim[1], 0}
-        {parent_to_point[3], (cells_per_dim[1]*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + (cells_per_dim[0]*(cells_per_dim[2]+1))},
-        // replacing parent-cell corner '4' {0, 0, cells_per_dim[2]}
-        {parent_to_point[4], cells_per_dim[2]},
-        // replacing parent-cell corner '5' {cells_per_dim[0], 0, cells_per_dim[2]}
-        {parent_to_point[5], (cells_per_dim[0]*(cells_per_dim[2]+1)) + cells_per_dim[2]},
-        // replacing parent-cell corner '6' {0, cells_per_dim[1], cells_per_dim[2]}
-        {parent_to_point[6], (cells_per_dim[1]*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + cells_per_dim[2]},
-        // replacing parent-cell corner '7' {cells_per_dim[0], cells_per_dim[1], cells_per_dim[2]}
-        {parent_to_point[7], (cells_per_dim[1]*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + (cells_per_dim[0]*(cells_per_dim[2]+1))
-         + cells_per_dim[2]}};
-    // Get parent_cell_to_face = { {face, orientation}, {another face, its orientation}, ...}.
+
+    // Collect vertices of parent cell intersections that do not coincide with any of the
+    // 8 vertices of parentCell_to_point_
+    // TODO
+
+    // Check/classify from the extra missing vertices which ones have an equivalent vertex in the
+    // single cell refinement and store them in parentGridVertex_to_singleCellRefVertex
+
+    const std::array<int,8> classic8Vertices = 
+        {// corIdx (J*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + (I*(cells_per_dim[2]+1)) +K
+            // replacing parent-cell corner '0' {0,0,0}
+            0,
+            // replacing parent-cell corner '1' {cells_per_dim[0], 0, 0}
+            cells_per_dim[0]*(cells_per_dim[2]+1),
+            // replacing parent-cell corner '2' {0, cells_perd_dim[1], 0}
+            cells_per_dim[1]*(cells_per_dim[0]+1)*(cells_per_dim[2]+1),
+            // replacing parent-cell corner '3' {cells_per_dim[0], cells_per_dim[1], 0}
+            (cells_per_dim[1]*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + (cells_per_dim[0]*(cells_per_dim[2]+1)),
+            // replacing parent-cell corner '4' {0, 0, cells_per_dim[2]}
+            cells_per_dim[2],
+            // replacing parent-cell corner '5' {cells_per_dim[0], 0, cells_per_dim[2]}
+            (cells_per_dim[0]*(cells_per_dim[2]+1)) + cells_per_dim[2],
+            // replacing parent-cell corner '6' {0, cells_per_dim[1], cells_per_dim[2]}
+            (cells_per_dim[1]*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + cells_per_dim[2],
+            // replacing parent-cell corner '7' {cells_per_dim[0], cells_per_dim[1], cells_per_dim[2]}
+            (cells_per_dim[1]*(cells_per_dim[0]+1)*(cells_per_dim[2]+1)) + (cells_per_dim[0]*(cells_per_dim[2]+1))
+            + cells_per_dim[2]
+        };
+    
+    for (std::size_t i; i < this->cell_to_point_[parent_idx].size(); ++i) // More points needed!! in case of >6 intersections
+    {
+        parentGridVertex_to_singleCellRefVertex[parentCell_to_point[i]].push_back(std::array<int,2>{parent_idx,
+                                                                                                    classic8Vertices[i]});
+
+        markedElemAndEquivRefinedCorn_to_corner[ std::array<int,2>{parent_idx, classic8Vertices[i]}]
+           = parentCell_to_point[i];
+    }
+    
     const auto& parent_cell_to_face = (this-> cell_to_face_[EntityRep<0>(parent_idx, true)]);
     // To store relation old-face to new-born-faces (children faces).
     std::vector<std::tuple<int,std::vector<int>>>  parent_to_children_faces;
@@ -1884,7 +1913,7 @@ CpGridData::refineSingleCell(const std::array<int,3>& cells_per_dim, const int& 
         } // if-J_FACE
         parent_to_children_faces.push_back(std::make_tuple(face.index(), children_faces));
     }
-    return {refined_grid_ptr, parent_to_refined_corners, parent_to_children_faces};
+    return {refined_grid_ptr, parent_to_children_faces};
 }
 
 bool CpGridData::mark(int refCount, const cpgrid::Entity<0>& element, bool throwOnFailure)

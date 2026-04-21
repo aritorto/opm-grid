@@ -122,9 +122,11 @@ void refineAndProvideMarkedRefinedRelations(const Dune::CpGrid& grid, /* Marked 
             const auto& shiftedLevel = markedElemLevel - preAdaptMaxLevel-1;
             // Build auxiliary LGR for the refinement of this element
             const auto& [elemLgr_ptr,
-                         parentCorners_to_equivalentRefinedCorners,
                          parentFace_to_itsRefinedFaces]
-                = grid.currentLeafData().refineSingleCell(cells_per_dim_vec[shiftedLevel], element.index());
+                = grid.currentLeafData().refineSingleCell(cells_per_dim_vec[shiftedLevel],
+                                                          element.index(),
+                                                          cornerInMarkedElemWithEquivRefinedCorner,
+                                                          markedElemAndEquivRefinedCorn_to_corner);
             markedElem_to_itsLgr[ element.index() ] = elemLgr_ptr;
 
             const int childrenCount = cells_per_dim_vec[shiftedLevel][0]*cells_per_dim_vec[shiftedLevel][1]*cells_per_dim_vec[shiftedLevel][2];
@@ -146,10 +148,12 @@ void refineAndProvideMarkedRefinedRelations(const Dune::CpGrid& grid, /* Marked 
             }
 
             preAdapt_parent_to_children_cells_vec[element.level()][element.getLevelElem().index()] = std::make_pair( markedElemLevel, refinedChildrenList);
-            for (const auto& [markedCorner, lgrEquivCorner] : parentCorners_to_equivalentRefinedCorners) {
+
+            /*for (const auto& [markedCorner, lgrEquivCorner] : parentCorners_to_equivalentRefinedCorners) {
                 cornerInMarkedElemWithEquivRefinedCorner[markedCorner].push_back({element.index(), lgrEquivCorner});
                 markedElemAndEquivRefinedCorn_to_corner[ {element.index(), lgrEquivCorner}] = markedCorner;
-            }
+                }*/
+            
             for (const auto& [markedFace, itsRefinedFaces] : parentFace_to_itsRefinedFaces) {
                 faceInMarkedElemAndRefinedFaces[markedFace].push_back({element.index(), itsRefinedFaces});
             }

@@ -66,11 +66,15 @@ const std::shared_ptr<Dune::cpgrid::CpGridData> createSingleCellGridAndRefine(co
     const std::array<int,3>& coarse_grid_dim = {1,1,1};
     lgr.createCartesian(coarse_grid_dim, cell_sizes);
 
+    std::vector<std::vector<std::array<int,2>>> parentGridVertex_to_singleCellRefVertex{};
+    std::map<std::array<int,2>,int> markedElemAndEquivRefinedCorn_to_corner{};
+
     // Single-cell-refinement for the only cell contained in lgr grid.
     const auto& [lgr_ptr,
-                 lgr_parentCorners_to_equivalentRefinedCorners,
                  lgr_parentFace_to_itsRefinedFaces]
-        = lgr.currentLeafData().refineSingleCell(lgr_dim, 0);
+        = lgr.currentLeafData().refineSingleCell(lgr_dim, 0,
+                                                 parentGridVertex_to_singleCellRefVertex,
+                                                 markedElemAndEquivRefinedCorn_to_corner);
     return lgr_ptr;
 }
 
