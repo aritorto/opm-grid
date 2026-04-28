@@ -802,6 +802,12 @@ bool throwIfIsCoarseAtLgrBoundary(const LeafView& leafView,
     return true;
 }
 
+/// Adapted Sutherland-Hodgmal algorithm for clipping polygones to intersections/faces
+///
+/// Idea: extend each edge of the convex 'clip polygon' into a line
+/// and select only vertices from the 'subject polygon' that are on
+/// the visible side.
+
 } // namespace Lgr
 } // namespace Opm
 
