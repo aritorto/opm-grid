@@ -120,6 +120,7 @@ list(APPEND TEST_SOURCE_FILES
   tests/cpgrid/lgr/lgrs_sharing_faces_test.cpp
   tests/cpgrid/lgr/logicalCartesianSize_and_refinement_test.cpp
   tests/cpgrid/lgr/nested_refinement_test.cpp
+  tests/cpgrid/lgr/skew_pillars_intersection_test.cpp
 )
 
 if(USE_OPM_COMMON)

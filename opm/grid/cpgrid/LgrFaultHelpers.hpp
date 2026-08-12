@@ -499,6 +499,14 @@ computeFaceOverlapVertices(const Face&                                          
         }
     }
     const auto ordered = orderFaceVertices(face1_tag, overlapFaceVertices);
+    std::cout<<std::endl;
+    std::cout<< face1.index() << " face1 index intersection with face2 index: " << face2.index()<<std::endl;
+    for (const auto& p : ordered) {
+        std::cout<< p[0] << " " << p[1] << " " << p[2] <<std::endl;
+                        
+                       
+    }
+    std::cout<<std::endl;
     return std::make_optional<std::vector<Dune::FieldVector<double,3>>>(ordered);
 }
 
