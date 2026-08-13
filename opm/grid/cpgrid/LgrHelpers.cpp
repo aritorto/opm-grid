@@ -431,8 +431,13 @@ void identifyRefinedCornersPerLevel(const Dune::cpgrid::CpGridData& current_data
             const auto shiftedLevel = level - preAdaptMaxLevel -1;
 
             for (int faceIdx = 0; faceIdx < markedElem_to_itsLgr[elemIdx]->numFaces(); ++faceIdx) {
+                
                 const auto faceToCell = markedElem_to_itsLgr[elemIdx]->faceToCell(faceIdx);
-                if (faceToCell.size()==2) {
+                const auto cell1 = Dune::cpgrid::Entity<0>(*markedElem_to_itsLgr[elemIdx], faceToCell[0].index(), true);
+                const auto cell2 = Dune::cpgrid::Entity<0>(*markedElem_to_itsLgr[elemIdx], faceToCell[1].index(), true);
+                
+                if (faceToCell.size()==2) {// && (!isAtGridBoundary(*markedElem_to_itsLgr[elemIdx], cell1) && !isAtGridBoundary(*markedElem_to_itsLgr[elemIdx], cell2))) {
+                    //  if ((faceToCell.size()==2) && (!isAtGridBoundary(*markedElem_to_itsLgr[elemIdx], cell1) && !isAtGridBoundary(*markedElem_to_itsLgr[elemIdx], cell2))) {
                     for (const auto& point :  markedElem_to_itsLgr[elemIdx]->faceToPoint(faceIdx)) {
                         if (!visited[elemIdx][point]) {
                             visited[elemIdx][point] = true;
@@ -1587,177 +1592,6 @@ std::array<int,3> getPatchDim(const std::array<int,3>& startIJK, const std::arra
     return {endIJK[0]-startIJK[0], endIJK[1]-startIJK[1], endIJK[2]-startIJK[2]};
 }
 
-
-bool patchesShareFace(const std::vector<std::array<int,3>>& startIJK_vec,
-                      const std::vector<std::array<int,3>>& endIJK_vec,
-                      const std::array<int,3>& grid_dim)
-{
-    assert(!startIJK_vec.empty());
-    assert(!endIJK_vec.empty());
-    if ((startIJK_vec.size() == 1) && (endIJK_vec.size() == 1)){
-        return false;
-    }
-    if (startIJK_vec.size() != endIJK_vec.size() ){
-        OPM_THROW(std::logic_error, "Sizes of the arguments differ. Not enough information provided.");
-    }
-    for (long unsigned int patch = 0; patch < startIJK_vec.size(); ++patch){
-        bool valid_patch = true;
-        for (int c = 0; c < 3; ++c){
-            valid_patch = valid_patch && (startIJK_vec[patch][c] < endIJK_vec[patch][c]);
-        }
-        if (!valid_patch){
-            OPM_THROW(std::logic_error, "There is at least one invalid block of cells.");
-        }
-    }
-
-    auto detectSharing = [](const std::vector<int>& faceIdxs, const std::vector<int>& otherFaceIdxs) {
-        bool faceIsShared = false;
-        for (const auto& face : faceIdxs) {
-            for (const auto& otherFace : otherFaceIdxs) {
-                faceIsShared = faceIsShared || (face == otherFace);
-                if (faceIsShared) {
-                    return faceIsShared; // should be true here
-                }
-            }
-        }
-        return faceIsShared; // should be false here
-    };
-
-    for (long unsigned int patch = 0; patch < startIJK_vec.size(); ++patch) {
-        const auto& [iFalse, iTrue, jFalse, jTrue, kFalse, kTrue] = getBoundaryPatchFaces(startIJK_vec[patch],
-                                                                                               endIJK_vec[patch],
-                                                                                               grid_dim);
-        for (long unsigned int other_patch = patch+1; other_patch < startIJK_vec.size(); ++other_patch) {
-            const auto& [iFalseOther, iTrueOther, jFalseOther, jTrueOther, kFalseOther, kTrueOther] =
-                getBoundaryPatchFaces(startIJK_vec[other_patch], endIJK_vec[other_patch], grid_dim);
-            bool isShared = false;
-            if (startIJK_vec[other_patch][0] == endIJK_vec[patch][0]) {
-                isShared = isShared || detectSharing(iTrue, iFalseOther);
-            }
-            if (endIJK_vec[other_patch][0] == startIJK_vec[patch][0]) {
-                isShared = isShared || detectSharing(iFalse, iTrueOther);
-            }
-            if (startIJK_vec[other_patch][1] == endIJK_vec[patch][1]) {
-                isShared = isShared || detectSharing(jTrue, jFalseOther);
-            }
-            if (endIJK_vec[other_patch][1] == startIJK_vec[patch][1]) {
-                isShared = isShared || detectSharing(jFalse, jTrueOther);
-            }
-            if (startIJK_vec[other_patch][2] == endIJK_vec[patch][2]) {
-                isShared = isShared || detectSharing(kTrue, kFalseOther);
-            }
-            if (endIJK_vec[other_patch][2] == startIJK_vec[patch][2]) {
-                isShared = isShared || detectSharing(kFalse, kTrueOther);
-            }
-            if (isShared) {
-                return isShared;
-            }
-        } // other patch for-loop
-    } // patch for-loop
-    return false;
-}
-
-int sharedFaceTag(const std::vector<std::array<int,3>>& startIJK_2Patches,
-                  const std::vector<std::array<int,3>>& endIJK_2Patches,
-                  const std::array<int,3>& grid_dim)
-{
-    assert(startIJK_2Patches.size() == 2);
-    assert(endIJK_2Patches.size() == 2);
-
-    int faceTag = -1; // 0 represents I_FACE, 1 J_FACE, and 2 K_FACE. Use -1 for no sharing face case.
-
-    if (patchesShareFace(startIJK_2Patches, endIJK_2Patches, grid_dim)) {
-
-        const auto& detectSharing = [](const std::vector<int>& faceIdxs, const std::vector<int>& otherFaceIdxs){
-            bool faceIsShared = false;
-            for (const auto& face : faceIdxs) {
-                for (const auto& otherFace : otherFaceIdxs) {
-                    faceIsShared = faceIsShared || (face == otherFace);
-                    if (faceIsShared) {
-                        return faceIsShared; // should be true here
-                    }
-                }
-            }
-            return faceIsShared; // should be false here
-        };
-
-        const auto& [iFalse, iTrue, jFalse, jTrue, kFalse, kTrue] = getBoundaryPatchFaces(startIJK_2Patches[0],
-                                                                                          endIJK_2Patches[0],
-                                                                                          grid_dim);
-        const auto& [iFalseOther, iTrueOther, jFalseOther, jTrueOther, kFalseOther, kTrueOther] =
-            getBoundaryPatchFaces(startIJK_2Patches[1],
-                                  endIJK_2Patches[1],
-                                  grid_dim);
-
-
-        bool isShared = false;
-
-        // Check if patch1 lays on the left of patch2, so they might share an I_FACE that
-        // for patch1 is false-oriented (contained in iFalse) and for patch2 is true-oriented (contained in iTrueOther).
-        // patch2 | patch1
-        if (startIJK_2Patches[0][0] == endIJK_2Patches[1][0]) {
-            isShared = isShared || detectSharing(iFalse, iTrueOther);
-            if (isShared) {
-                faceTag = 0;
-            }
-        }
-        // Check if patch1 lays on the right of patch2, so they might share an I_FACE that
-        // for patch1 is true-oriented (contained in iTrue) and for patch2 is false-oriented (contained in iFalseOther).
-        // patch1 | patch2
-        if (endIJK_2Patches[0][0] == startIJK_2Patches[1][0]) {
-            isShared = isShared || detectSharing(iTrue, iFalseOther);
-            if (isShared) {
-                faceTag = 0;
-            }
-        }
-        // Check if patch1 lays in front of patch2, so they might share an J_FACE that
-        // for patch1 is true-oriented (contained in jTrue) and for patch2 is false-oriented (contained in jFalseOther).
-        //      patch2
-        //   -----
-        // patch1
-        if (endIJK_2Patches[0][1] == startIJK_2Patches[1][1]) {
-            isShared = isShared || detectSharing(jTrue, jFalseOther);
-            if (isShared) {
-                faceTag = 1;
-            }
-        }
-        // Check if patch1 lays in back of patch2, so they might share an J_FACE that
-        // for patch1 is false-oriented (contained in jFalse) and for patch2 is true-oriented (contained in jTrueOther).
-        //      patch1
-        //   -----
-        // patch2
-        if (startIJK_2Patches[0][1] == endIJK_2Patches[1][1]) {
-            isShared = isShared || detectSharing(jFalse, jTrueOther);
-            if (isShared) {
-                faceTag = 1;
-            }
-        }
-        // Check if patch1 lays on the bottom of patch2, so they might share an K_FACE that
-        // for patch1 is true-oriented (contained in kTrue) and for patch2 is false-oriented (contained in kFalseOther).
-        // patch2
-        // -----
-        // patch1
-        if (endIJK_2Patches[0][2] == startIJK_2Patches[1][2]) {
-            isShared = isShared || detectSharing(kTrue, kFalseOther);
-            if (isShared) {
-                faceTag = 2;
-            }
-        }
-        // Check if patch1 lays on the top of patch2, so they might share an K_FACE that
-        // for patch1 is false-oriented (contained in kFalse) and for patch2 is true-oriented (contained in kTrueOther).
-        // patch1
-        // -----
-        // patch2
-        if (startIJK_2Patches[0][2] == endIJK_2Patches[1][2]) {
-            isShared = isShared || detectSharing(kFalse, kTrueOther);
-            if (isShared) {
-                faceTag = 2;
-            }
-        }
-    }
-    return faceTag; // -1 when no face is shared, otherwise: 0 (shared I_FACE), 1 (shared J_FACE), 2 (shared K_FACE)
-}
-
 std::tuple<std::vector<std::array<int,3>>,
            std::vector<std::array<int,3>>,
            std::vector<std::array<int,3>>,
@@ -1804,44 +1638,6 @@ excludeFakeSubdivisions(const std::vector<std::array<int,3>>& cells_per_dim_vec,
                            std::move(filtered_endIJK_vec),
                            std::move(filtered_lgr_name_vec),
                            std::move(filtered_lgr_parent_grid_name_vec));
-}
-
-bool compatibleSubdivisions(const std::vector<std::array<int,3>>& cells_per_dim_vec,
-                            const std::vector<std::array<int,3>>& startIJK_vec,
-                            const std::vector<std::array<int,3>>& endIJK_vec,
-                            const std::array<int,3>& logicalCartesianSize)
-{
-    bool compatibleSubdivisions = true;
-    if (startIJK_vec.size() > 1) {
-        bool notAllowedYet = false;
-        for (std::size_t level = 0; level < startIJK_vec.size(); ++level) {
-            for (std::size_t otherLevel = level+1; otherLevel < startIJK_vec.size(); ++otherLevel) {
-                const int sharedTag = sharedFaceTag({startIJK_vec[level], startIJK_vec[otherLevel]},
-                                                          {endIJK_vec[level],endIJK_vec[otherLevel]},
-                                                          logicalCartesianSize);
-                if(sharedTag == -1){
-                    break; // Go to the next "other patch"
-                }
-                if (sharedTag == 0 ) {
-                    notAllowedYet = notAllowedYet ||
-                        ((cells_per_dim_vec[level][1] != cells_per_dim_vec[otherLevel][1]) || (cells_per_dim_vec[level][2] != cells_per_dim_vec[otherLevel][2]));
-                }
-                if (sharedTag == 1) {
-                    notAllowedYet = notAllowedYet ||
-                        ((cells_per_dim_vec[level][0] != cells_per_dim_vec[otherLevel][0]) || (cells_per_dim_vec[level][2] != cells_per_dim_vec[otherLevel][2]));
-                }
-                if (sharedTag == 2) {
-                    notAllowedYet = notAllowedYet ||
-                        ((cells_per_dim_vec[level][0] != cells_per_dim_vec[otherLevel][0]) || (cells_per_dim_vec[level][1] != cells_per_dim_vec[otherLevel][1]));
-                }
-                if (notAllowedYet){
-                    compatibleSubdivisions = false;
-                    break;
-                }
-            } // end-otherLevel-for-loop
-        } // end-level-for-loop
-    }// end-if-patchesShareFace
-    return compatibleSubdivisions;
 }
 
 void containsEightDifferentCorners(const std::array<int,8>& cell_to_point)

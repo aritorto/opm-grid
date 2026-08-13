@@ -2679,22 +2679,6 @@ void CpGrid::addLgrsUpdateLeafView(const std::vector<std::array<int,3>>& cells_p
         // Determine the assigned level for the refinement of each marked cell
         std::vector<int> assignRefinedLevel(currentLeafData().size(0));
 
-        // Compatibility of numbers of subdivisions of neighboring LGRs".
-        // The method compatibleSubdivision returns a bool. We convert it into an int since MPI within DUNE does not support bool directly.
-        int compatibleSubdivisions = Opm::Lgr::compatibleSubdivisions(filtered_cells_per_dim_vec,
-                                                                      filtered_startIJK_vec,
-                                                                      filtered_endIJK_vec,
-                                                                      currentData()[parent_grid_index]->logicalCartesianSize());
-        compatibleSubdivisions = comm().min(compatibleSubdivisions); // 0 when at least one process returns false (un-compatible subdivisions).
-        if(!compatibleSubdivisions) {
-            if (comm().rank()==0){
-                OPM_THROW(std::logic_error, "Subdivisions of neighboring LGRs sharing at least one face do not coincide. Not suppported yet.");
-            }
-            else{
-                OPM_THROW_NOLOG(std::logic_error, "Subdivisions of neighboring LGRs sharing at least one face do not coincide. Not suppported yet.");
-            }
-        }
-
         // To determine if an LGR is not empty in a given process, for each
         // parent grid, we set at_least_one_active_parent[in that level] to 1
         // if it contains at least one active cell, and to 0 otherwise.

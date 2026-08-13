@@ -566,19 +566,6 @@ std::array<std::vector<int>,6> getBoundaryPatchFaces(const std::array<int,3>& st
 /// @return patch_dim Patch dimension {#cells in x-direction, #cells in y-direction, #cells in z-direction}.
 std::array<int,3> getPatchDim(const std::array<int,3>& startIJK, const std::array<int,3>& endIJK);
 
-/// @brief Determine if a finite amount of patches (of cells) share a face.
-///
-/// @param [in]  startIJK_vec  Vector of Cartesian triplet indices where each patch starts.
-/// @param [in]  endIJK_vec    Vector of Cartesian triplet indices where each patch ends.
-///                            Last patch Cartesian triplet is {endIJK_vec[<patch>][0]-1, ... ,endIJK_vec[<patch>][2]-1}.
-bool patchesShareFace(const std::vector<std::array<int,3>>& startIJK_vec,
-                      const std::vector<std::array<int,3>>& endIJK_vec,
-                      const std::array<int,3>& grid_dim);
-
-int sharedFaceTag(const std::vector<std::array<int,3>>& startIJK_2Patches,
-                  const std::vector<std::array<int,3>>& endIJK_2Patches,
-                  const std::array<int,3>& grid_dim);
-
 /// @brief Filter out LGR entries that do not result in any actual refinement.
 ///
 /// This function removes entries where the number of subdivisions in each direction is 0
@@ -608,27 +595,6 @@ excludeFakeSubdivisions(const std::vector<std::array<int, 3>>& cells_per_dim_vec
                         const std::vector<std::array<int, 3>>& endIJK_vec,
                         const std::vector<std::string>& lgr_name_vec,
                         const std::vector<std::string>& lgr_parent_grid_name_vec);
-
-/// @brief Check compatibility of number of subdivisions of neighboring LGRs.
-///
-/// Check shared faces on boundaries of LGRs. Not optimal since the code below does not take into account
-/// active/inactive cells, instead, relies on "ijk-computations".
-///
-/// @param [in]  cells_per_dim_vec    Vector of expected subdivisions per cell, per direction, in each LGR.
-/// @param [in]  startIJK_vec         Vector of Cartesian triplet indices where each patch starts.
-/// @param [in]  endIJK_vec           Vector of Cartesian triplet indices where each patch ends.
-///                                   Last cell part of the lgr will be {endIJK_vec[patch][0]-1, ..., endIJK_vec[patch][2]-1}.
-/// @parem [in]  logicalCartesianSize From the level grid where the cell blocks were selected.
-/// @return True if all block of cells either do not share faces on their boundaries, or they may share faces with compatible
-///         subdivisions. Example: block1 and block2 share an I_FACE, then number of subdivisions NY NZ should coincide, i.e.
-///         if block1, block2 cells_per_dim values are {NX1, NY1, NZ1}, {NX2, NY2, NZ2}, respectively, then NY1 == NY2 and
-///         NZ1 == NZ2.
-///         False if at least two blocks share a face and their subdivions are not compatible. In the example above,
-///         if NY1 != NY2 or NZ1 != NZ2.
-bool compatibleSubdivisions(const std::vector<std::array<int,3>>& cells_per_dim_vec,
-                            const std::vector<std::array<int,3>>& startIJK_vec,
-                            const std::vector<std::array<int,3>>& endIJK_vec,
-                            const std::array<int,3>& logicalCartesianSize);
 
 void containsEightDifferentCorners(const std::array<int,8>& cell_to_point);
 

@@ -1077,6 +1077,67 @@ BOOST_AUTO_TEST_CASE(simpleSameLgr)
                            {"LGR1"}); //  lgr_name_vec
 }
 
+
+BOOST_AUTO_TEST_CASE(simpleDiffLgrUncompatibleSubdivisions)
+{
+    Dune::CpGrid grid;
+    Opm::createGridAndAddLgrs(grid,
+                              deckTwoCellsInXDirGrid,
+                              /* cells_per_dim_vec */ {{1,2,1}, {1,3,1}},
+                              /* startIJK_vec */      {{0,0,0}, {1,0,0}},
+                              /* endIJK_vec */        {{1,1,1}, {2,1,1}},
+                              /* lgr_name_vec */      {"LGR1", "LGR2"});
+
+    const auto& leafGrid = grid.currentLeafData();
+
+    for (int f = 0; f < grid.numFaces(); ++f)
+    {
+        std::cout<< f << " leaf face index" << std::endl;
+        for (const auto& p : leafGrid.faceToPoint(f) )
+        {
+            const auto& v = Dune::cpgrid::Entity<3>(leafGrid, p, true).geometry().center();
+            std::cout<< v[0] << " " << v[1] << " " << v[2] << std::endl;
+        }
+        std::cout<<std::endl;
+    }
+
+    const std::vector<std::vector<Coordinate>> expectedFaces = {
+        {{0.,0.,0.}, {6.,0.,0.}, {6.,3.,0.}, {0.,3.,0.}},      // K_FACE   z = 0,  face 0
+        {{0.,3.,0.}, {6.,3.,0.}, {6.,6.,0.}, {0.,6.,0.}},      // K_FACE   z = 0,  face 1
+        {{0.,0.,8.}, {6.,0.,8.}, {6.,3.,8.}, {0.,3.,8.}},      // K_FACE   z = 8,  face 2
+        {{0.,3.,8.}, {6.,3.,8.}, {6.,6.,8.}, {0.,6.,8.}},      // K_FACE   z = 8,  face 3
+        {{0.,0.,0.}, {0.,3.,0.}, {0.,3.,8.}, {0.,0.,8.}},      // I_FACE   x = 0,  face 4
+        {{0.,3.,0.}, {0.,6.,0.}, {0.,6.,8.}, {0.,3.,8.}},      // I_FACE   x = 0,  face 5
+        {{6.,0.,0.}, {6.,3.,0.}, {6.,3.,1.}, {6.,0.,1.}},      // I_FACE   x = 6,  face 6
+        {{6.,3.,0.}, {6.,6.,0.}, {6.,6.,1.}, {6.,3.,1.}},      // I_FACE   x = 6,  face 7
+        {{0.,0.,0.}, {6.,0.,0.}, {6.,0.,8.}, {0.,0.,8.}},      // J_FACE   y = 0,  face 8
+        {{0.,3.,0.}, {6.,3.,0.}, {6.,3.,8.}, {0.,3.,8.}},      // J_FACE   y = 3,  face 9
+        {{0.,6.,0.}, {6.,6.,0.}, {6.,6.,8.}, {0.,6.,8.}},      // J_FACE   y = 6,  face 10
+        // 
+        {{6.,0.,1.}, {12.,0.,1.}, {12.,2.,1.}, {6.,2.,1.}},    // K_FACE   z = 1,  face 11
+        {{6.,2.,1.}, {12.,2.,1.}, {12.,4.,1.}, {6.,4.,1.}},    // K_FACE   z = 1,  face 12
+        {{6.,4.,1.}, {12.,4.,1.}, {12.,6.,1.}, {6.,6.,1.}},    // K_FACE   z = 1,  face 13
+        //
+        {{6.,0.,9.}, {12.,0.,9.}, {12.,3.,9.}, {6.,3.,9.}},    // K_FACE   z = 9,  face 13
+        {{6.,3.,9.}, {12.,3.,9.}, {12.,6.,9.}, {6.,6.,9.}},    // K_FACE   z = 9,  face 14
+        {{6.,0.,1.}, {6.,3.,1.}, {6.,3.,8.}, {6.,0.,8.}},      // I_FACE   x = 6,  face 15
+        {{6.,0.,8.}, {6.,3.,8.}, {6.,3.,9.}, {6.,0.,9.}},      // I_FACE   x = 6,  face 16
+        {{6.,3.,1.}, {6.,6.,1.}, {6.,6.,8.}, {6.,3.,8.}},      // I_FACE   x = 6,  face 17
+        {{6.,3.,8.}, {6.,6.,8.}, {6.,6.,9.}, {6.,3.,9.}},      // I_FACE   x = 6,  face 18
+        {{12.,0.,1.}, {12.,3.,1.}, {12.,3.,9.}, {12.,0.,9.}},  // I_FACE   x = 12, face 19
+        {{12.,3.,1.}, {12.,6.,1.}, {12.,6.,9.}, {12.,3.,9.}},  // I_FACE   x = 12, face 20
+        {{6.,0.,1.}, {12.,0.,1.}, {12.,0.,9.}, {6.,0.,9.}},    // J_FACE   y = 0,  face 21
+        {{6.,3.,1.}, {12.,3.,1.}, {12.,3.,9.}, {6.,3.,9.}},    // J_FACE   y = 3,  face 22
+        {{6.,6.,1.}, {12.,6.,1.}, {12.,6.,9.}, {6.,6.,9.}},    // J_FACE   y = 6,  face 23
+    };
+
+
+
+
+    
+}
+
+
 // Level zero grid dims = 1x2x1
 //
 // cell 0
