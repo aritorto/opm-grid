@@ -358,6 +358,13 @@ PORO
                                                                  /* smallerLevel = */ 1,
                                                                  /* indexInInsideFromSmallerLevel = */ 3,
                                                                  /* indexInInsideFromLargerLevel = */ 2);
+
+    for (const auto& p : Dune::vertices(grid.leafGridView()))
+    {
+        const auto& v = Dune::cpgrid::Entity<0>(grid.currentLeafData(), p.index(), true).geometry().center();
+        std::cout<< v[0] << " " << v[1] << " " << v[2] << " vertex, idx: " << p.index() <<std::endl;
+    }
+    
     BOOST_CHECK(parentIntersectionToPoint == expectedCornerIndices);
 }
 

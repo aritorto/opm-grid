@@ -1259,6 +1259,7 @@ Dune::cpgrid::Intersection CpGrid::getParentIntersectionFromLgrBoundaryFace(cons
                 const auto& insideOrigin = intersection.inside().getOrigin();
                 for (const auto& originIntersection : intersections(this->levelGridView(0), insideOrigin)) {
                     if (originIntersection.indexInInside() == intersection.indexInInside()) {
+                        /** when origin has more than one face per type (e.g. two I+ faces), this needs to be corrected */
                         return originIntersection;
                     }
                 }

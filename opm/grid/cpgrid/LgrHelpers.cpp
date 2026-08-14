@@ -164,7 +164,7 @@ void refineAndProvideMarkedRefinedRelations(const Dune::CpGrid& grid, /* Marked 
         } // end-if-elemMark==1
     } // end-elem-for-loop
 
-    if (!withoutFaults && (markedElem_count>1)) {
+    if (/*!withoutFaults &&*/ (markedElem_count>1)) {
         makeCellRefinementsNeighborsAware(markedElem_to_itsLgr, // to get neighbor information
                                           cellRefinementsInfo,
                                           grid.currentLeafData(),

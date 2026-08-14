@@ -104,9 +104,16 @@ struct FieldVectorLess {
     bool operator()(const Dune::FieldVector<double,3>& v,
                     const Dune::FieldVector<double,3>& w) const
     {
+        /*for (int i = 0; i < 3; ++i) {
+          if (v[i] < w[i]) return true; 
+          if (v[i] > w[i]) return false; 
+          }
+          return false;*/
+        constexpr double eps = 1e-9;
+
         for (int i = 0; i < 3; ++i) {
-            if (v[i] < w[i]) return true; 
-            if (v[i] > w[i]) return false; 
+            if (v[i] < w[i] - eps) return true;
+            if (v[i] > w[i] + eps) return false;
         }
         return false;
     }
