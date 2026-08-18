@@ -21,6 +21,7 @@
 
 #include <opm/grid/cpgrid/CpGridUtilities.hpp>
 #include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
+#include <opm/grid/cpgrid/LgrHelpers.hpp>
 
 #include <algorithm>
 #include <array>
@@ -99,10 +100,9 @@ lgrCOORDandZCORN(const Dune::CpGrid& grid,
     // Initialized as {nz, -1} to detect inactive cell columns.
     std::vector<std::array<int,2>> minMaxPerCellPillar(nx*ny, {nz, -1});
 
-
     for (const auto& ijk : lgrIJK) {
 
-         // Compute the bottom and top k per cell pillar (i, j).
+        // Compute the bottom and top k per cell pillar (i, j).
         int cell_pillar_idx = ijk[1] * nx + ijk[0];
         auto& minMax = minMaxPerCellPillar[cell_pillar_idx];
 
@@ -163,7 +163,7 @@ lgrCOORDandZCORN(const Dune::CpGrid& grid,
             const auto& [bottom_k, top_k] = minMaxPerCellPillar[cell_pillar_idx];
 
             if ( bottom_k == nz ) {
-                 continue; // no active pillar at (i,j)
+                continue; // no active pillar at (i,j)
             }
 
             const auto bottom_lgr_cartesian_idx = (bottom_k*nx*ny) + cell_pillar_idx;
@@ -234,6 +234,114 @@ void processPillars(int i, int j, int nx,
     setPillarCoordinates(i, j, nx, 5 /*topCorner*/, 1 /*bottomCorner*/,  1 /*to select pillar (i+1,j)*/, topElem, bottomElem, lgrCOORD);
     setPillarCoordinates(i, j, nx, 6 /*topCorner*/, 2 /*bottomCorner*/,  2 /*to select pillar (i,j+1)*/, topElem, bottomElem, lgrCOORD);
     setPillarCoordinates(i, j, nx, 7 /*topCorner*/, 3 /*bottomCorner*/,  3 /*to select pillar (i+1,j+1)*/, topElem, bottomElem, lgrCOORD);
+}
+
+
+std::pair<std::vector<double>, std::vector<double>>
+lgrCOORDandZCORN(const Dune::cpgrid::CpGridData& cellRefGrid,
+                 const std::array<int, 3>& cellRefGrid_dim)
+{
+    // Check not all cells are inactive
+    const auto numCells = cellRefGrid.size(0);
+    if (numCells == 0) {
+        OPM_THROW(std::logic_error, "Grid has no active cells.\n");
+    }
+    
+    const int nx = cellRefGrid_dim[0];
+    const int ny = cellRefGrid_dim[1];
+    const int nz = cellRefGrid_dim[2];
+
+    // Initialize all pillars as inactive (setting COORD values to std::numeric_limits<double>::max()).
+    std::vector<double> coord(6*(nx+1)*(ny+1), std::numeric_limits<double>::max());
+
+    // Initialize all ZCORN as inactive (setting values to std::numeric_limits<double>::max()).
+    std::vector<double> zcorn(8*nx*ny*nz, std::numeric_limits<double>::max());
+
+    // Map to determine min and max k per cell column (i, j) (min/max_k = 0, ..., nz-1).
+    // Initialized as {nz, -1} to detect inactive cell columns.
+    std::vector<std::array<int,2>> minMaxPerCellPillar(nx*ny, {nz, -1});
+
+
+    for (int elemIdx = 0; elemIdx < cellRefGrid.size(0); ++elemIdx) {
+
+       const auto ijk = Opm::Lgr::getIJK(elemIdx, cellRefGrid_dim);
+
+         // Compute the bottom and top k per cell pillar (i, j).
+        int cell_pillar_idx = ijk[1] * nx + ijk[0];
+        auto& minMax = minMaxPerCellPillar[cell_pillar_idx];
+
+        minMax[0] = std::min(ijk[2], minMax[0]);
+        minMax[1] = std::max(ijk[2], minMax[1]);
+    }
+
+    for (int elemIdx = 0; elemIdx < cellRefGrid.size(0); ++elemIdx) {
+         
+        const auto elem = Dune::cpgrid::Entity<0>(cellRefGrid, elemIdx, true);
+        const auto elemIJK = Opm::Lgr::getIJK(elemIdx, cellRefGrid_dim);
+
+        // For a grid with nz layers, ZCORN values are ordered:
+        //
+        //      top layer nz-1
+        //   bottom layer nz-1
+        //      top layer nz-2
+        //   bottom layer nz-2
+        // ...
+        //      top layer 1
+        //   bottom layer 1
+        //      top layer 0
+        //   bottom layer 0
+
+        int zcorn_top_00_idx = ((nz-1-elemIJK[2])*8*nx*ny) + (elemIJK[1]*4*nx) + (2*elemIJK[0]); // assoc. w. elem corner 4
+
+        // Bottom indices
+        int zcorn_top_10_idx = zcorn_top_00_idx + 1;  // assoc. w. elem corner 5
+        int zcorn_top_01_idx = zcorn_top_00_idx + (2*nx);  // assoc. w. elem corner 6
+        int zcorn_top_11_idx = zcorn_top_01_idx + 1; // assoc. w. elem corner 7
+
+        // Top indices
+        int zcorn_bottom_00_idx = zcorn_top_00_idx + (4*nx*ny); // assoc. w. elem corner 0
+        int zcorn_bottom_10_idx = zcorn_bottom_00_idx + 1;  // assoc. w. elem corner 1
+        int zcorn_bottom_01_idx = zcorn_bottom_00_idx + (2*nx); // assoc. w. elem corner 2
+        int zcorn_bottom_11_idx = zcorn_bottom_01_idx + 1;  // assoc. w. elem corner
+
+        // Note: zcorn_idx + 1 moves to the next position along the x-axis (i+1, j, k)
+        //       zcorn_idx + (2*nx) moves to the next position along the y-axis (i, j+1, k)
+        //       zcorn_idx + (4*nx*ny) moves to the next position along the z-axis (i,j, k+1)
+
+        // Assign ZCORN values
+        zcorn[zcorn_top_00_idx] = elem.subEntity<3>(4).geometry().center()[2];
+        zcorn[zcorn_top_10_idx] = elem.subEntity<3>(5).geometry().center()[2];
+        zcorn[zcorn_top_01_idx] = elem.subEntity<3>(6).geometry().center()[2];
+        zcorn[zcorn_top_11_idx] = elem.subEntity<3>(7).geometry().center()[2];
+
+        zcorn[zcorn_bottom_00_idx] = elem.subEntity<3>(0).geometry().center()[2];
+        zcorn[zcorn_bottom_10_idx] = elem.subEntity<3>(1).geometry().center()[2];
+        zcorn[zcorn_bottom_01_idx] = elem.subEntity<3>(2).geometry().center()[2];
+        zcorn[zcorn_bottom_11_idx] = elem.subEntity<3>(3).geometry().center()[2];
+    }
+
+    // Rewrite values for active pillars
+    for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+            const int cell_pillar_idx = (j*nx) + i;
+
+            // Get min/max k for pillar at (i,j)
+            const auto& [bottom_k, top_k] = minMaxPerCellPillar[cell_pillar_idx];
+
+            if ( bottom_k == nz ) {
+                continue; // no active pillar at (i,j)
+            }
+
+            const auto bottom_lgr_cartesian_idx = (bottom_k*nx*ny) + cell_pillar_idx;
+            const auto top_lgr_cartesian_idx = (top_k*nx*ny) + cell_pillar_idx;
+            // Active parent cell-> all active children (at least before processing MINPV(V) in CARFIN block???)
+            const auto bottomElem = Dune::cpgrid::Entity<0>(cellRefGrid, bottom_lgr_cartesian_idx, true);
+            const auto topElem = Dune::cpgrid::Entity<0>(cellRefGrid, top_lgr_cartesian_idx, true);
+
+            Opm::processPillars(i,j, nx, topElem, bottomElem, coord);
+        }
+    }
+    return std::make_pair(coord, zcorn);
 }
 
 } // namespace Opm

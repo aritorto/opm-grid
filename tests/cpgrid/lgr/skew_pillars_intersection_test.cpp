@@ -25,6 +25,7 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/CpGridData.hpp>
+#include <opm/grid/cpgrid/CpGridUtilities.hpp>
 #include <opm/grid/cpgrid/LgrFaultHelpers.hpp>
 #include <opm/grid/cpgrid/LgrHelpers.hpp>
 
@@ -86,12 +87,12 @@ PORO
     Opm::createGridFromDeckString(grid,
                                   deckString);
 
-    // Element faces
+    /* Element faces
     //
     // I- Face index 0:
     //
     // {0, 0, 8} 
-    //     |      \
+    ///    |      \
     //     |         {0, 6, 7.1}
     //     |             |
     //     |             |
@@ -99,7 +100,7 @@ PORO
     //
     //
     //          {6, 2.73333, 8.2}
-    //              /           \
+    ///             /           \
     //             /             \
     //            /               \
     //           /                  {6, 6, 5}
@@ -111,30 +112,123 @@ PORO
     //      /  I+ Face index 1       |
     //     /                         |
     // {6, 0, 0} -----------------  {6, 6, 0}
+    */
     
 
     const auto parentCell = Dune::cpgrid::Entity<0>(grid.currentLeafData(), 0, true);
+
+    std::set<Dune::FieldVector<double,3>, Opm::Lgr::FieldVectorLess> input_vertices{};
     
     for (const auto& intersection : Dune::intersections(grid.leafGridView(), parentCell)) {
         
         const auto& faceToPoint = grid.currentLeafData().faceToPoint(intersection.id());
         const auto faceTag =  grid.currentLeafData().faceTag(intersection.id());
        
-        if (faceTag == 0) {// I face
+        // if (faceTag == 0) {// I face
         std::cout<< "Face index: " << intersection.id() << std::endl;
         for (const auto& point : faceToPoint) {
             const auto v = Dune::cpgrid::Entity<3>( grid.currentLeafData(), point, true).geometry().center();
-            std::cout<< v[0] << " " << v[1] << " " << v[2] << std::endl;
-        }
+            // input_vertices.insert(v);
+            //  std::cout<< v[0] << " " << v[1] << " " << v[2] << std::endl;
+            // }
         std::cout<<std::endl;
         }
     }
+
+    for (const auto& p : Dune::vertices(grid.leafGridView())) {
+        const auto v = Dune::cpgrid::Entity<3>( grid.currentLeafData(), p.index(), true).geometry().center();
+        input_vertices.insert(v);
+        
+    }
     
-    grid.addLgrsUpdateLeafView({{1,2,1}}, // cells_per_dim
+    const auto& cellPillars = Opm::Lgr::extendCellPillars(grid.currentLeafData(), parentCell.index());
+    for (const auto& pillar :cellPillars)
+    {
+        for (const auto& p : pillar) {
+            std::cout<< p << " pillar " <<std::endl;
+        }
+        std::cout<<std::endl;
+    }
+    std::cout<<std::endl;
+    
+    /* const auto& extendedCellToPoint = Opm::Lgr::buildExtendedCellPointVertexMap(grid.currentLeafData(), parentCell.index());
+    for (const auto& [v, idx] : extendedCellToPoint) {
+        std::cout<< v[0] << " " << v[1] << " " << v[2] << " has index: " << idx<<  std::endl;
+        }*/
+
+
+    std::cout<< " Vertices input " << std::endl;
+    for (const auto& v : input_vertices) {
+         std::cout<< v[0] << " " << v[1] << " " << v[2] << std::endl;
+    }
+
+
+    std::vector<std::shared_ptr<Dune::cpgrid::CpGridData>> cellRef_data;
+    std::shared_ptr<Dune::cpgrid::CpGridData> cellRefGrid_ptr = std::make_shared<Dune::cpgrid::CpGridData>(cellRef_data); // ccobj_
+    auto& cellRefGrid = *cellRefGrid_ptr;
+    Opm::Lgr::GeomData cellRefGeomData(cellRefGrid);
+
+    const Dune::cpgrid::Geometry<3,3>& parentCellGeom = parentCell.geometry();
+    parentCellGeom.refineCellifiedPatch(/* cells_per_dim = */ {1,2,1}, cellRefGeomData.geometries,
+                                        cellRefGeomData.cell_to_point,
+                                        cellRefGeomData.cell_to_face,
+                                        cellRefGeomData.face_to_point,
+                                        cellRefGeomData.face_to_cell,
+                                        cellRefGeomData.face_tags,
+                                        cellRefGeomData.face_normals,
+                                        /* block/patch-dimensions = */ {1,1,1},
+                                        /* widthX, lengthY, heightZ*/ {1.}, {1.}, {1.});
+
+    const auto p = parentCellGeom.local({6, 2.73333, 8.2}); //{6., 0.3333, 1.} ); // {6., 4.36667, 6.6})
+    std::cout<< p[0] << " " << p[1] << " " << p[2] << " local!" << std::endl;
+
+     const auto g = parentCellGeom.global({1, 0, 1}); //{6., 0.3333, 1.} ); // {6., 4.36667, 6.6})
+    std::cout<< g[0] << " " << g[1] << " " << g[2] << " global!" << std::endl;
+
+     const auto l = parentCellGeom.local(g); //{6., 0.3333, 1.} ); // {6., 4.36667, 6.6})
+    std::cout<< l[0] << " " << l[1] << " " << l[2] << " local!" << std::endl;
+ 
+    std::set<Dune::FieldVector<double,3>, Opm::Lgr::FieldVectorLess> output_vertices{};
+    
+    for (int i = 0; i < cellRefGrid.size(3); ++i) {
+        const auto v = Dune::cpgrid::Entity<3>( cellRefGrid, i, true).geometry().center();
+        output_vertices.insert(v);
+    }
+    std::cout<<std::endl;
+
+     std::cout<< " Vertices output " << std::endl;
+    for (const auto& v : output_vertices) {
+         std::cout<< v[0] << " " << v[1] << " " << v[2] << std::endl;
+    }
+
+    const auto& [coord, zcorn] = Opm::lgrCOORDandZCORN(cellRefGrid, /* cellRefGrid_dim = */ {1,2,1});
+    for (const auto& c : coord)
+    {
+        std::cout<< c << std::endl;
+    }
+    
+
+    
+    std::vector<std::vector<std::pair<int, std::vector<int>>>> faceInMarkedElemAndRefinedFaces{};
+    
+    /* grid.addLgrsUpdateLeafView({{1,2,1}}, // cells_per_dim
                                {{0,0,0}}, // startIJK
                                {{1,1,1}}, // endIJK
                                {"LGR1"}); // lgr name
 
+    std::set<Dune::FieldVector<double,3>, Opm::Lgr::FieldVectorLess> output_vertices{};
+    for (const auto& p : Dune::vertices(grid.leafGridView())) {
+        const auto v = Dune::cpgrid::Entity<3>( grid.currentLeafData(), p.index(), true).geometry().center();
+        output_vertices.insert(v);
+    }
+    std::cout<<std::endl;
+
+     std::cout<< " Vertices output " << std::endl;
+    for (const auto& v : output_vertices) {
+         std::cout<< v[0] << " " << v[1] << " " << v[2] << std::endl;
+    }
+
+    
     std::cout<< "Faces after refinement element zero " <<std::endl;
     std::cout<<std::endl;
 
@@ -159,20 +253,20 @@ PORO
                 }
             }
         }
-    }
+        }*/
 
 
 
-     bool isInteriorInA, isInteriorInB;
+    /*   bool isInteriorInA, isInteriorInB;
     
-     const auto seg =  Opm::Lgr::computeSegmentIntersection(/* startA */ {6., 3., 0.}, /* endA */ {6., 4.36667, 6.6},
-                                                           /* startB */ {6., 0.33333, 1.}, /* endB */ {6., 6., 1.},
+     const auto seg =  Opm::Lgr::computeSegmentIntersection( {6., 3., 0.},  {6., 4.36667, 6.6},
+                                                            {6., 0.33333, 1.}, {6., 6., 1.},
                                                            isInteriorInA,
                                                            isInteriorInB);
     if (seg.has_value()) {
         const auto [p,q] = seg.value();
         std::cout<< p[0] << " " << p[1] << " " << p[2] << std::endl;
         std::cout<< q[0] << " " << q[1] << " " << q[2] << std::endl;
-    }
+    }*/
 
 }

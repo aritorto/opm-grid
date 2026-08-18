@@ -104,9 +104,10 @@ struct FieldVectorLess {
     bool operator()(const Dune::FieldVector<double,3>& v,
                     const Dune::FieldVector<double,3>& w) const
     {
+        double tolerance = 1e-8;
         for (int i = 0; i < 3; ++i) {
-            if (v[i] < w[i]) return true; 
-            if (v[i] > w[i]) return false; 
+            if (v[i] < w[i] - tolerance) return true; 
+            if (v[i] > w[i] + tolerance) return false; 
         }
         return false;
     }
@@ -650,6 +651,32 @@ void makeCellRefinementsNeighborsAware(std::vector<std::shared_ptr<Dune::cpgrid:
                                        const Dune::cpgrid::CpGridData& parentGrid,
                                        std::vector<std::vector<std::pair<int, std::vector<int>>>>& faceInMarkedElemAndRefinedFaces,
                                        std::vector<GridModificationMapping>& modificationMapps);
+
+// Cell-to-point has always 8 corners (maybe repeated)
+//
+// Recall that a cell has 8 corners:
+//        6 --- 7
+//       /     /   TOP FACE
+//      4 --- 5
+//        2 --- 3
+//       /     /   BOTTOM FACE
+//      0 --- 1
+//
+// return pillars in this order:
+// { pillar0 vertex indices, ..., ..., pillar3 vertex indices}
+// where
+// pillar0 = { cell-to-point[0], cell-to-point[4]}
+// pillar1 = { cell-to-point[1], cell-to-point[5]}
+// pillar2 = { cell-to-point[2], cell-to-point[6]}
+// pillar3 = { cell-to-point[3], cell-to-point[7]}
+std::array<std::array<int,2>,4> createCellPillars(const Dune::cpgrid::CpGridData& grid,
+                                                  int elemIdx);
+
+
+// Extend cell-pillars taking into accunt vertices of multiple type faces (e.g. in faults presence).
+std::array<std::vector<int>, 4> extendCellPillars(const Dune::cpgrid::CpGridData& grid,
+                                                  int elemIdx);
+
 
 } // namespace Lgr
 } // namespace Opm

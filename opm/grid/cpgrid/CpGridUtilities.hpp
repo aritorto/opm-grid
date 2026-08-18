@@ -65,6 +65,11 @@ lgrCOORDandZCORN(const Dune::CpGrid& grid,
                  const std::unordered_map<int, int>& lgrCartesianIdxToCellIdx,
                  const std::vector<std::array<int, 3>>& lgrIJK);
 
+
+std::pair<std::vector<double>, std::vector<double>>
+lgrCOORDandZCORN(const Dune::cpgrid::CpGridData& cellRefGrid,
+                 const std::array<int, 3>& cellRefGrid_dim);
+
 /// @brief Sets the coordinates for a pillar.
 ///
 /// This function calculates the pillar index based on the given (i, j) position

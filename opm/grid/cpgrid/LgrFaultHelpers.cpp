@@ -1231,5 +1231,46 @@ std::optional<int> findMatchingFaceIdx(const Dune::cpgrid::CpGridData& targetGri
     return std::nullopt;
 }
 
+std::array<std::array<int,2>,4> createCellPillars(const Dune::cpgrid::CpGridData& grid,
+                                                  int elemIdx)
+{
+    const auto& cellToPoint = grid.cellToPoint(elemIdx);
+    return {{ {cellToPoint[0], cellToPoint[4]},
+              {cellToPoint[1], cellToPoint[5]},
+              {cellToPoint[2], cellToPoint[6]},
+              {cellToPoint[3], cellToPoint[7]} }};
+}
+
+std::array<std::vector<int>, 4> extendCellPillars(const Dune::cpgrid::CpGridData& grid,
+                                                  int elemIdx)
+{
+    const auto& extendedCellToPoint = buildExtendedCellPointVertexMap(grid, elemIdx);
+    const auto& pillars = createCellPillars(grid, elemIdx);
+
+    std::array<std::vector<int>, 4> extendedPillars{};
+
+    int count = 0;
+    for (const auto& pillar : pillars) {
+        int minIdx = pillar[0];
+        int maxIdx = pillar[1];
+
+        std::set<int> indices{};
+        indices.insert(minIdx);
+        indices.insert(maxIdx);
+        
+        for (const auto& [vertex, vIdx] : extendedCellToPoint) {
+            if ((vIdx <= minIdx) || (vIdx >= maxIdx))
+                continue;
+            // add vertex index to the pillar
+            indices.insert(vIdx);
+        }
+        
+       extendedPillars[count].assign(indices.begin(), indices.end());
+       ++count;
+    }
+    return extendedPillars;
+}
+
+
 } // namespace Lgr
 } // namespace Opm
