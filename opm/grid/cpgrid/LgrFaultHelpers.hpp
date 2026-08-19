@@ -104,11 +104,6 @@ struct FieldVectorLess {
     bool operator()(const Dune::FieldVector<double,3>& v,
                     const Dune::FieldVector<double,3>& w) const
     {
-        /*for (int i = 0; i < 3; ++i) {
-          if (v[i] < w[i]) return true; 
-          if (v[i] > w[i]) return false; 
-          }
-          return false;*/
         constexpr double eps = 1e-9;
 
         for (int i = 0; i < 3; ++i) {
@@ -325,6 +320,26 @@ bool isVertexInsideFace(const Dune::FieldVector<double,3>& vertex,
                         const Dune::cpgrid::CpGridData& face_gridData,
                         const std::vector<std::array<int,2>>& face_edges,
                         const Dune::FieldVector<double,3>& face_normal);
+
+template <class Intersection>
+bool isFaceContainedInFace(const Intersection& face1,
+                           const Dune::cpgrid::CpGridData& grid1,
+                           const Intersection& face2,
+                           const Dune::cpgrid::CpGridData& grid2)
+{
+    const auto& face1ToPoint = grid1.faceToPoint(face1.id());
+    const auto face2edges = createEdges(grid2.faceToPoint(face2.id()));
+    const auto& face2normal = grid2.faceNormals(face2.id());
+     
+    for (std::size_t i = 0; i < face1ToPoint.size(); ++i) {
+        const auto vertex = Dune::cpgrid::Entity<3>(grid1, face1ToPoint[i], true).geometry().center();
+        if (!isVertexInsideFace(vertex, grid2, face2edges, face2normal)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 
 bool isVertexInSegmentInterior(const Dune::FieldVector<double,3>& vertex,
                                const Dune::FieldVector<double,3>& startSegment,

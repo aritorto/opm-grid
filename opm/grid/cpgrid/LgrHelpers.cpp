@@ -164,7 +164,7 @@ void refineAndProvideMarkedRefinedRelations(const Dune::CpGrid& grid, /* Marked 
         } // end-if-elemMark==1
     } // end-elem-for-loop
 
-    if (/*!withoutFaults &&*/ (markedElem_count>1)) {
+    if (!withoutFaults && (markedElem_count>1)) {
         makeCellRefinementsNeighborsAware(markedElem_to_itsLgr, // to get neighbor information
                                           cellRefinementsInfo,
                                           grid.currentLeafData(),
@@ -291,9 +291,7 @@ void identifyRefinedCornersPerLevel(const Dune::cpgrid::CpGridData& current_data
                                     const std::vector<int>& assignRefinedLevel,
                                     const std::vector<std::vector<std::array<int,2>>>& cornerInMarkedElemWithEquivRefinedCorner,
                                     const std::vector<std::vector<std::pair<int, std::vector<int>>>>& faceInMarkedElemAndRefinedFaces,
-                                    const std::vector<std::array<int,3>>& cells_per_dim_vec,
-                                    const std::vector<CellRefinementBoundaryInfo>& cellRefinementsInfo,
-                                    bool withoutFaults)
+                                    const std::vector<CellRefinementBoundaryInfo>& cellRefinementsInfo)
 {
     std::vector<std::vector<bool>> visited{};
     visited.resize(current_data.size(0));
@@ -433,11 +431,7 @@ void identifyRefinedCornersPerLevel(const Dune::cpgrid::CpGridData& current_data
             for (int faceIdx = 0; faceIdx < markedElem_to_itsLgr[elemIdx]->numFaces(); ++faceIdx) {
                 
                 const auto faceToCell = markedElem_to_itsLgr[elemIdx]->faceToCell(faceIdx);
-                const auto cell1 = Dune::cpgrid::Entity<0>(*markedElem_to_itsLgr[elemIdx], faceToCell[0].index(), true);
-                const auto cell2 = Dune::cpgrid::Entity<0>(*markedElem_to_itsLgr[elemIdx], faceToCell[1].index(), true);
-                
-                if (faceToCell.size()==2) {// && (!isAtGridBoundary(*markedElem_to_itsLgr[elemIdx], cell1) && !isAtGridBoundary(*markedElem_to_itsLgr[elemIdx], cell2))) {
-                    //  if ((faceToCell.size()==2) && (!isAtGridBoundary(*markedElem_to_itsLgr[elemIdx], cell1) && !isAtGridBoundary(*markedElem_to_itsLgr[elemIdx], cell2))) {
+                if (faceToCell.size()==2) {
                     for (const auto& point :  markedElem_to_itsLgr[elemIdx]->faceToPoint(faceIdx)) {
                         if (!visited[elemIdx][point]) {
                             visited[elemIdx][point] = true;
@@ -447,9 +441,7 @@ void identifyRefinedCornersPerLevel(const Dune::cpgrid::CpGridData& current_data
                                                 std::array{level, refined_corner_count_vec[shiftedLevel]},                     // keyB
                                                 refined_corner_count_vec[shiftedLevel]);
                         }
-                        
-                    }
-                    
+                    }  
                 }
             }
         }
@@ -464,18 +456,14 @@ void markVanishedCorner(const std::array<int,2>& vanished,
 }
 
 void identifyLeafGridCorners(const Dune::cpgrid::CpGridData& current_data,
-                             int preAdaptMaxLevel,
                              std::map<std::array<int,2>,int>& elemLgrAndElemLgrCorner_to_adaptedCorner,
                              std::unordered_map<int,std::array<int,2>>& adaptedCorner_to_elemLgrAndElemLgrCorner,
                              int& corner_count,
                              const std::vector<std::shared_ptr<Dune::cpgrid::CpGridData>>& markedElem_to_itsLgr,
-                             const std::vector<int>& assignRefinedLevel,
                              const std::vector<std::vector<std::array<int,2>>>& cornerInMarkedElemWithEquivRefinedCorner,
                              std::map<std::array<int,2>, std::array<int,2>>& vanishedRefinedCorner_to_itsLastAppearance,
                              const std::vector<std::vector<std::pair<int, std::vector<int>>>>& faceInMarkedElemAndRefinedFaces,
-                             const std::vector<std::array<int,3>>& cells_per_dim_vec,
-                             const std::vector<CellRefinementBoundaryInfo>& cellRefinementsInfo,
-                             bool withoutFaults)
+                             const std::vector<CellRefinementBoundaryInfo>& cellRefinementsInfo)
 {
     std::vector<std::vector<bool>> visited{};
     visited.resize(current_data.size(0));
@@ -504,21 +492,6 @@ void identifyLeafGridCorners(const Dune::cpgrid::CpGridData& current_data,
             visited[lgr][lgrCorner] = true;
         }
     }
-
-    /* for (int elemIdx = 0; elemIdx < current_data.size(0); ++elemIdx) {
-        if (markedElem_to_itsLgr.at(elemIdx)!= nullptr) {
-            int level = assignRefinedLevel[elemIdx];
-            int shiftedLevel = level - preAdaptMaxLevel - 1;
-
-            const auto& lgr = markedElem_to_itsLgr[elemIdx];
-
-            processLeafInteriorCorners(elemIdx, shiftedLevel, lgr, corner_count,
-                                       elemLgrAndElemLgrCorner_to_adaptedCorner,
-                                       adaptedCorner_to_elemLgrAndElemLgrCorner,
-                                       cells_per_dim_vec,
-                                       visited);
-        }
-        }*/
          
     for (int coarseFaceIdx = 0; coarseFaceIdx < current_data.numFaces(); ++coarseFaceIdx) {
             
@@ -583,13 +556,11 @@ void identifyLeafGridCorners(const Dune::cpgrid::CpGridData& current_data,
 
     for (int elemIdx = 0; elemIdx < current_data.size(0); ++elemIdx) {
         if (markedElem_to_itsLgr.at(elemIdx)!= nullptr) {
-            int level = assignRefinedLevel[elemIdx];
-            int shiftedLevel = level - preAdaptMaxLevel - 1;
-
-            const auto& lgr = markedElem_to_itsLgr[elemIdx];
-
+            
             for (int faceIdx = 0; faceIdx < markedElem_to_itsLgr[elemIdx]->numFaces(); ++faceIdx) {
                 const auto faceToCell = markedElem_to_itsLgr[elemIdx]->faceToCell(faceIdx);
+
+                
                 if (faceToCell.size()==2) {
                     for (const auto& point :  markedElem_to_itsLgr[elemIdx]->faceToPoint(faceIdx)) {
                         if (!visited[elemIdx][point]) {
@@ -805,10 +776,7 @@ void populateRefinedFaces(std::vector<Dune::cpgrid::EntityVariableBase<Dune::cpg
                           const std::vector<std::shared_ptr<Dune::cpgrid::CpGridData>>& markedElem_to_itsLgr,
                           const int& preAdaptMaxLevel,
                           const std::vector<std::vector<std::array<int,2>>>& cornerInMarkedElemWithEquivRefinedCorner,
-                          const std::map<std::array<int,2>,int>& markedElemAndEquivRefinedCorn_to_corner,
-                          const std::vector<CellRefinementBoundaryInfo>& boundaryInfo,
-                          const std::vector<std::vector<std::pair<int, std::vector<int>>>>& faceInMarkedElemAndRefinedFaces,
-                          const Dune::cpgrid::CpGridData& current_data)
+                          const std::map<std::array<int,2>,int>& markedElemAndEquivRefinedCorn_to_corner)
 {
 
     auto findCornerIdx = [&](const Dune::FieldVector<double,3>& w) {
