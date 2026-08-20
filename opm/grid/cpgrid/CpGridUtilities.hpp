@@ -25,6 +25,31 @@
 namespace Opm
 {
 
+
+struct PillarLess {
+    bool operator()(const Dune::FieldVector<double,3>& v,
+                    const Dune::FieldVector<double,3>& w) const
+    {
+        double tolerance = 1e-8;
+        /* for (int i = 0; i < 3; ++i) {
+           if (v[i] < w[i] - tolerance) return true; 
+           if (v[i] > w[i] + tolerance) return false; 
+           }*/
+
+        if (v[1] < w[1] - tolerance) return true; 
+        if (v[1] > w[1] + tolerance) return false;
+        
+        if (v[0] < w[0] - tolerance) return true; 
+        if (v[0] > w[0] + tolerance) return false;
+        
+        if (v[2] < w[2] - tolerance) return true; 
+        if (v[2] > w[2] + tolerance) return false;
+            
+        return false;
+    }
+};
+
+
 /// @brief Retrieves Cartesian indices for a specified Local Grid Refinement (LGR) level in a Dune::CpGrid.
 ///
 /// This function extracts the mapping between active cell indices and Cartesian indices for a given LGR name.
@@ -107,6 +132,23 @@ void processPillars(int i, int j, int nx,
                     const Dune::cpgrid::Entity<0>& topElem,
                     const Dune::cpgrid::Entity<0>& bottomElem,
                     std::vector<double>& lgrCOORD);
+
+
+std::set<Dune::FieldVector<double,3>, PillarLess>
+computeBasicRefinedCorners(const Dune::cpgrid::Entity<0>& parentCell,
+                           const std::array<int,3>& nxnynz, // or nxfin, nyfin, nzfin
+                           const std::vector<double>& widthsX, // hxfin
+                           const std::vector<double>& lengthsY, // hyfin
+                           const std::vector<double>& heightsZ); // hzfin
+
+void addAllParentCellFaceVertices(const Dune::cpgrid::CpGridData& grid,
+                                  const Dune::cpgrid::Entity<0>& parentCell,
+                                  std::set<Dune::FieldVector<double,3>, PillarLess>& input_vertices);
+
+std::pair<Dune::FieldVector<double,3>, double> computeCenterAndVolume(const std::array<Dune::FieldVector<double,3>,8>& corners);
+
+
+    
 } // namespace Opm
 
 #endif // OPM_CPGRIDUTILITIES_HEADER_INCLUDED

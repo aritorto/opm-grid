@@ -791,14 +791,6 @@ namespace Dune
                                 GlobalCoordinate face_center = { 0., 0., 0.};
                                 for (int corn = 0; corn < 4; ++corn){
                                     face_center += refined_corners[face_to_point[corn]].center();
-                                    if (face_tag == 0)
-                                    {std::cout<< idx << " face idx from geometry hpp " <<std::endl;
-                                        std::cout<< refined_corners[face_to_point[corn]].center()[0] << " " <<
-                                            refined_corners[face_to_point[corn]].center()[1] << " " <<
-                                            refined_corners[face_to_point[corn]].center()[2] <<std::endl;
-                                    }
-                                    std::cout<<std::endl;
-                                    
                                 }
                                 face_center /= 4.;
                                 // Construct global face normal(s) (only one 'needed') and add it to "mutable_face_normals"

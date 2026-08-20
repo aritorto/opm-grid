@@ -191,6 +191,9 @@ std::array<std::vector<int>,6> groupFaceIndicesByType(const Dune::cpgrid::CpGrid
 /// @return true if every face group contains at most one face; otherwise false.
 bool hasAtMostOneFacePerGroup(const std::array<std::vector<int>,6>& classifiedFaces);
 
+Dune::FieldVector<double,3> computeFaceCenter(const std::vector<Dune::FieldVector<double,3>>& faceToCoord);
+
+
 /// @brief Computes the center, area, and unit normal of a quadrilateral face.
 ///
 /// The face center is computed as the arithmetic mean of the four face
@@ -271,7 +274,16 @@ computeSegmentIntersection(const Dune::FieldVector<double,3>& startA, const Dune
 ///
 /// @return A vector of edges, where each edge is represented as
 ///         std::array<int, 2>{startVertexIdx, endVertexIdx}.
-std::vector<std::array<int,2>> createEdges(const auto& faceToPoint);
+std::vector<std::array<int,2>> createEdges(const auto& faceToPoint)
+{
+    std::vector<std::array<int,2>> edges{};
+    edges.reserve(faceToPoint.size());
+    for (std::size_t i = 0; i < faceToPoint.size(); ++i) {
+        edges.push_back(std::array<int,2>{ faceToPoint[i], faceToPoint[(i+1)%faceToPoint.size()]});
+    }
+    return edges;
+}
+
 
 /// @brief Determines whether a point lies in the half-plane defined by a face edge.
 ///

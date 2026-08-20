@@ -77,16 +77,27 @@ bool hasAtMostOneFacePerGroup(const std::array<std::vector<int>,6>& classifiedFa
     return true;
 }
 
-std::tuple<Dune::FieldVector<double,3>, double, Dune::FieldVector<double,3>>
-computeFaceCenterAreaNormal(const std::vector<Dune::FieldVector<double,3>>& faceToCoord)
+Dune::FieldVector<double,3> computeFaceCenter(const std::vector<Dune::FieldVector<double,3>>& faceToCoord)
 {
-    assert(faceToCoord.size() == 4); // for now, only quadrilateral face 
-
     Dune::FieldVector<double,3> faceCenter = {0., 0.,0.};
     for (const auto& coord : faceToCoord) {
         faceCenter += coord;
     }
     faceCenter /= 4.;
+    return faceCenter;
+}
+
+std::tuple<Dune::FieldVector<double,3>, double, Dune::FieldVector<double,3>>
+computeFaceCenterAreaNormal(const std::vector<Dune::FieldVector<double,3>>& faceToCoord)
+{
+    assert(faceToCoord.size() == 4); // for now, only quadrilateral face 
+
+    Dune::FieldVector<double,3> faceCenter = computeFaceCenter(faceToCoord);
+        /*{0., 0.,0.};
+    for (const auto& coord : faceToCoord) {
+        faceCenter += coord;
+    }
+    faceCenter /= 4.;*/
     
     // Calculate face area by adding the 4 areas of the triangles partitioning the face.
     double faceArea = 0.0;
@@ -213,15 +224,6 @@ computeSegmentIntersection(const Dune::FieldVector<double,3>& startA, const Dune
     return {{p,p}};
 }
 
-std::vector<std::array<int,2>> createEdges(const auto& faceToPoint)
-{
-    std::vector<std::array<int,2>> edges{};
-    edges.reserve(faceToPoint.size());
-    for (std::size_t i = 0; i < faceToPoint.size(); ++i) {
-        edges.push_back(std::array<int,2>{ faceToPoint[i], faceToPoint[(i+1)%faceToPoint.size()]});
-    }
-    return edges;
-}
 
 bool inSemiplane(const Dune::FieldVector<double,3>& vertex,
                  const Dune::FieldVector<double,3>& faceVertex,

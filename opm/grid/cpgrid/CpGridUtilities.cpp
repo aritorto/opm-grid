@@ -22,6 +22,7 @@
 #include <opm/grid/cpgrid/CpGridUtilities.hpp>
 #include <opm/grid/cpgrid/LevelCartesianIndexMapper.hpp>
 #include <opm/grid/cpgrid/LgrHelpers.hpp>
+#include <opm/grid/cpgrid/LgrFaultHelpers.hpp>
 
 #include <algorithm>
 #include <array>
@@ -342,6 +343,158 @@ lgrCOORDandZCORN(const Dune::cpgrid::CpGridData& cellRefGrid,
         }
     }
     return std::make_pair(coord, zcorn);
+}
+
+std::set<Dune::FieldVector<double,3>,/*Opm::Lgr::FieldVectorLess*/ PillarLess>
+computeBasicRefinedCorners(const Dune::cpgrid::Entity<0>& parentCell,
+                           const std::array<int,3>& nxnynz, // or nxfin, nyfin, nzfin
+                           const std::vector<double>& widthsX, // hxfin
+                           const std::vector<double>& lengthsY, // hyfin
+                           const std::vector<double>& heightsZ) // hzfin
+{
+    std::set<Dune::FieldVector<double,3>, /*Opm::Lgr::FieldVectorLess*/ PillarLess> coords{};
+
+    const auto parentCellGeom = parentCell.geometry();
+
+    int nx = nxnynz[0];
+    int ny = nxnynz[1];
+    int nz = nxnynz[2];
+
+    // Initialize all ZCORN as inactive (setting values to std::numeric_limits<double>::max()).
+    std::vector<double> zcorn(8*nx*ny*nz, std::numeric_limits<double>::max());
+    
+    assert(static_cast<int>(widthsX.size()) == nx);
+    assert(static_cast<int>(lengthsY.size()) == ny);
+    assert(static_cast<int>(heightsZ.size()) == nz);
+    
+    const auto localCoordNumerator = []( const std::vector<double>& vec,
+                                         int sumLimit,
+                                         double multiplier) {
+        double lcn = 0;
+        assert(!vec.empty());
+        assert(sumLimit < static_cast<int>(vec.size()));
+        lcn += multiplier*vec[sumLimit];
+        for (int m = 0; m < sumLimit; ++m) {
+            lcn += vec[m];
+        }
+        return lcn;
+    };
+    // E.g. localCoordNumerator( dx, 3, 0.25) =  x0 + x1 + x2 + 0.25.x3
+    //
+    const double sumWidths = std::accumulate(widthsX.begin(), widthsX.end(), double(0));
+    // x0 + x1 + ... + xL, if dx = {x0, x1, ..., xL}
+    const double sumLengths = std::accumulate(lengthsY.begin(), lengthsY.end(), double(0));
+    // y0 + y1 + ... + yM, if dy = {y0, y1, ..., yM}
+    const double sumHeights = std::accumulate(heightsZ.begin(), heightsZ.end(), double(0));
+    // z0 + z1 + ... + zN, if dz = {z0, z1, ..., zN}
+
+    for (int j = 0; j < ny +1; ++j) {
+        double local_y = 0;
+        for (int i = 0; i < nx +1; ++i) {
+            double local_x = 0.;
+            for (int k = 0; k < nz +1; ++k) {
+                double local_z = 0.;
+
+                // int refined_corner_idx = (j*(nx+1)*(nz+1)) + (i*(nz+1)) + k;
+          
+                if ( i == nx) { // last corner in the x-direction
+                    local_x = sumWidths;
+                } else {
+                    local_x = localCoordNumerator(widthsX, i/nx, double((i % nx)) / nx);
+                }
+                if ( j == ny) { // last corner in the y-direction
+                    local_y = sumLengths;
+                } else {
+                    local_y = localCoordNumerator(lengthsY, j/ny, double((j % ny)) / ny);
+                }
+                if ( k == nz) { // last corner in the z-direction
+                    local_z = sumHeights;
+                } else {
+                    local_z = localCoordNumerator(heightsZ, k/nz, double((k % nz)) /nz);
+                }
+
+                const Dune::FieldVector<double,3> local_refined_corner = { local_x/sumWidths, local_y/sumLengths, local_z/sumHeights };
+                assert(local_x/sumWidths <= 1.);
+                assert(local_y/sumLengths <= 1.);
+                assert(local_z/sumHeights <= 1.);
+                
+                coords.insert(parentCellGeom.global(local_refined_corner));
+            } // end k-for-loop
+        } // end i-for-loop
+    } // end j-for-loop
+
+
+    // Populate zcorn
+
+    
+
+
+    
+    return coords;
+}
+
+void addAllParentCellFaceVertices(const Dune::cpgrid::CpGridData& grid,
+                                  const Dune::cpgrid::Entity<0>& parentCell,
+                                  std::set<Dune::FieldVector<double,3>, PillarLess>& input_vertices)
+{
+    for (const auto& face : grid.cellToFace(parentCell.index())) {
+        for (const auto& point : grid.faceToPoint(face.index())) {
+            input_vertices.insert(Dune::cpgrid::Entity<3>( grid, point, true).geometry().center());
+        }
+    }
+}
+
+std::pair<Dune::FieldVector<double,3>, double> computeCenterAndVolume(const std::array<Dune::FieldVector<double,3>,8>& corners)
+{
+    Dune::FieldVector<double,3> center = {0., 0., 0.};
+    for (int i = 0; i < 8; ++i) {
+        center += corners[i];
+    }
+    center /= 8.;
+
+    double volume = 0.;
+    
+    static const std::vector<std::array<int,4>> cellFacesVtxIndices = {
+        {0,2,6,4}, // I minus
+        {1,3,7,5}, // I plus
+        {2,3,7,6}, // J minus 
+        {0,1,5,4}, // J plus
+        {0,1,3,2}, // K minus
+        {4,5,7,6}  // K plus
+    };
+    
+    std::vector<std::vector<std::array<int,2>>> tetra_edge_indices;
+    tetra_edge_indices.reserve(6);
+
+    for (const auto& faceVtxIndices : cellFacesVtxIndices) {
+        tetra_edge_indices.push_back(Opm::Lgr::createEdges(faceVtxIndices));
+    }
+    
+    // Sum of the 24 volumes to get the volume of the hexahedron
+ 
+    // Calculate the volume of each hexahedron, by adding
+    // the 4 tetrahedra at each face (4x6 = 24 tetrahedra).
+    for (int face = 0; face < 6; ++face) {
+        
+        const auto faceVtxIndices = cellFacesVtxIndices[face];
+        const auto faceCenter = Opm::Lgr::computeFaceCenter({corners[faceVtxIndices[0]],
+                corners[faceVtxIndices[1]],
+                corners[faceVtxIndices[2]],
+                corners[faceVtxIndices[3]]});
+        
+        for (int edge = 0; edge < 4; ++edge) {
+            // Construction of each tetrahedron based on "face" with one
+            // of its edges equal to "edge".
+            const Dune::FieldVector<double,3> tetra_corners[4] = {
+                corners[tetra_edge_indices[face][edge][0]],  
+                corners[tetra_edge_indices[face][edge][1]],  
+                faceCenter,
+                center };  
+            volume += std::fabs(simplex_volume(tetra_corners));
+        } // end edge-for-loop
+    } // end face-for-loop
+
+    return {center, volume};
 }
 
 } // namespace Opm

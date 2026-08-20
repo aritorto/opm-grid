@@ -48,14 +48,51 @@ struct Fixture
 
 BOOST_GLOBAL_FIXTURE(Fixture);
 
+std::array<Dune::FieldVector<double,3>,8> unitCube = {{
+        {0.,0.,0.}, {1.,0.,0.}, {0.,1.,0.}, {1.,1.,0.},
+        {0.,0.,1.}, {1.,0.,1.}, {0.,1.,1.}, {1.,1.,1.}
+    }};
+
+void checkUnitCubeCorners(const Dune::cpgrid::CpGridData& grid)
+{
+    for (int elemIdx = 0; elemIdx < grid.size(0); ++elemIdx) {
+        
+        const auto cellGeom = Dune::cpgrid::Entity<0>( grid, elemIdx, true).geometry();
+        const auto& cellToPoint = grid.cellToPoint(elemIdx);
+        
+        BOOST_CHECK_EQUAL(cellToPoint.size(), 8);
+        
+        for (int corner = 0; corner < 8; ++corner) {
+            const auto vertex = Dune::cpgrid::Entity<3>( grid, cellToPoint[corner], true).geometry().center();
+            const auto localVtx = cellGeom.local(vertex);
+            BOOST_CHECK( Opm::Lgr::areClose(cellGeom.local(vertex), unitCube[corner]) );
+
+            BOOST_CHECK( Opm::Lgr::areClose(cellGeom.global(localVtx), vertex) );
+        }
+    }
+}
+
 
 BOOST_AUTO_TEST_CASE(skewPillarsSimpleGrid)
 {
+    /* DIMENS
+       2 1 1 /    nx ny nz
 
+       COORD      (nx+1)*(ny+1) pillars
+ 0 0 0     0 0 9 bottom - top pillar 0
+ 6 0 0     6 3 9 bottom - top pillar 1
+12 0 0    12 0 9 bottom - top pillar 2
+
+ 0 6 0    0 6 9  bottom - top pillar 3
+ 6 6 0    6 6 9  bottom - top pillar 4
+12 6 0   12 6 9  bottom - top pillar 5
+
+     */
+    
     const std::string deckString =
         R"(RUNSPEC
 DIMENS
- 2 1 1 /
+ 2 1 1 /  
 
 GRID
 
@@ -70,8 +107,8 @@ COORD
 /
 
 ZCORN
-0 0 1 1  0 0 1 1
-8 8.2 9 9  7.1 5 9 9
+0   0  1  1    0  0  1  1
+8 8.2  9  9  7.1  5  9  9
 /
 
 ACTNUM
@@ -83,9 +120,75 @@ PORO
 /
 )";
 
+    Opm::Parser parser;
+    const auto deck = parser.parseString(deckString);
+    Opm::EclipseState ecl_state(deck);
+    Opm::EclipseGrid eclipse_grid = ecl_state.getInputGrid();
+
+    // I. Collect input info about the pillars
+    const auto& input_coord = eclipse_grid.getCOORD();
+    std::vector<std::pair<Dune::FieldVector<double,3>, Dune::FieldVector<double,3>>> pillarsBottomTop{};
+    pillarsBottomTop.resize(6); // 6 = (nx+1)*(ny+1)
+
+    int vertices_count = input_coord.size()/6;
+    
+    for (int i = 0; i < vertices_count; ++i)
+    {
+        pillarsBottomTop[i] = std::make_pair<Dune::FieldVector<double,3>, Dune::FieldVector<double,3>>({input_coord[6*i], input_coord[6*i+1], input_coord[6*i+2]},
+                                          {input_coord[6*i+3], input_coord[6*i+4], input_coord[6*i+5]});
+    }
+    for (const auto& [b, t] : pillarsBottomTop) {
+        std::cout<< b[0] << " " << b[1] << " " << b[2] << " bottom " <<std::endl;
+        std::cout<< t[0] << " " << t[1] << " " << t[2] << " top " <<std::endl;
+
+        std::cout<<std::endl;
+    }
+    // II. Create a Geometry "cell" for each "column" (4 pillars: (i,j), (i+1,j), (i, j+1), (i+1,j+1))
+    //     Total amount of column-cells: nx*ny
+    // pillarsBottomTop = pillar_0,       ..., pillar_nx       (j=0)
+    //                    pillar_(nx+1), ...., pillar_2*nx (j=1)
+    // ...
+    //                    pillar_((nx+1)*ny)
+    int nx = eclipse_grid.getNX();
+    int ny = eclipse_grid.getNY();
+
+    static constexpr std::array<int,8> corner_indices = {0,1,2,3,4,5,6,7};
+
+    for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+            // Calculate center and volume for  "column" geometry (4 pillars: (i,j), (i+1,j), (i, j+1), (i+1,j+1))
+            const int p0 = (j*(nx + 1)) + i;
+            const int p1 = (j*(nx + 1)) + (i + 1);
+            const int p2 = ((j + 1)*(nx + 1)) + i;
+            const int p3 = ((j + 1)*(nx + 1)) + (i +1);
+
+            const std::array<Dune::FieldVector<double,3>,8> corners = {{pillarsBottomTop[p0].first, pillarsBottomTop[p0].second,
+                                                                            pillarsBottomTop[p1].first, pillarsBottomTop[p1].second,
+                                                                            pillarsBottomTop[p2].first, pillarsBottomTop[p2].second,
+                                                                            pillarsBottomTop[p3].first, pillarsBottomTop[p3].second}};
+            
+            const auto [center, volume] = Opm::computeCenterAndVolume(corners);
+
+            
+            std::cout<< center[0] << " " << center[1] << " " << center[2] << " center, vol : " << volume <<std::endl;
+
+            /*     auto pillarCell_corners = std::make_shared<EntityVariable<cpgrid::Geometry<0, 3>, 3>>();
+        EntityVariableBase<cpgrid::Geometry<0, 3>>& mutable_in_father_reference_elem_corners = *in_father_reference_elem_corners;
+        // Assign the corners. Make use of the fact that pointers behave like iterators.
+        mutable_in_father_reference_elem_corners.assign(corners_in_father_reference_elem_temp,
+        corners_in_father_reference_elem_temp + 8);*/
+
+            const auto pillarCell = Dune::cpgrid::Geometry<3,3>(center, volume, corners, corner_indices.data());
+        }
+    }
+    
+
+   
+
     Dune::CpGrid grid;
-    Opm::createGridFromDeckString(grid,
-                                  deckString);
+    grid.processEclipseFormat(&eclipse_grid, &ecl_state, false, false, false);
+    /*  Opm::createGridFromDeckString(grid,
+        deckString);*/
 
     /* Element faces
     //
@@ -113,33 +216,30 @@ PORO
     //     /                         |
     // {6, 0, 0} -----------------  {6, 6, 0}
     */
-    
 
+
+    // 1. Extract the corner computation from Geomtry header of a single-cell-refinement
+    // 2. Create refined-cell-pillars with extra vertices of parent faces
+    // 3. Rearrange the info from step 2 to have a coord vector 
+    // 4. zcorn can be taken from Opm::Lgr::lgrCOORDandZCORN(...) [here coord is wrong for parent cell with >6 intersections, but zcorn should be okay]
+    // 5. Create an actnum for this refinement
+    // 6. Create an eclipGrid(dims, coord, zcorn, actnum)
+    // 7. Create a CpGridData with processEclipseGrid();
+
+    checkUnitCubeCorners(grid.currentLeafData());
+    
     const auto parentCell = Dune::cpgrid::Entity<0>(grid.currentLeafData(), 0, true);
-
-    std::set<Dune::FieldVector<double,3>, Opm::Lgr::FieldVectorLess> input_vertices{};
     
-    for (const auto& intersection : Dune::intersections(grid.leafGridView(), parentCell)) {
-        
-        const auto& faceToPoint = grid.currentLeafData().faceToPoint(intersection.id());
-        const auto faceTag =  grid.currentLeafData().faceTag(intersection.id());
-       
-        // if (faceTag == 0) {// I face
-        std::cout<< "Face index: " << intersection.id() << std::endl;
-        for (const auto& point : faceToPoint) {
-            const auto v = Dune::cpgrid::Entity<3>( grid.currentLeafData(), point, true).geometry().center();
-            // input_vertices.insert(v);
-            //  std::cout<< v[0] << " " << v[1] << " " << v[2] << std::endl;
-            // }
-        std::cout<<std::endl;
-        }
-    }
+    auto input_vertices = Opm::computeBasicRefinedCorners(parentCell,
+                                                     {1,2,1}, // nxnynz 
+                                                     {1.},{.5, .5},{1.}); //  widthsX,lengthsY,heightsZ
 
-    for (const auto& p : Dune::vertices(grid.leafGridView())) {
-        const auto v = Dune::cpgrid::Entity<3>( grid.currentLeafData(), p.index(), true).geometry().center();
-        input_vertices.insert(v);
-        
-    }
+    Opm::addAllParentCellFaceVertices(grid.currentLeafData(),
+                                 parentCell,
+                                 input_vertices);
+    
+
+
     
     const auto& cellPillars = Opm::Lgr::extendCellPillars(grid.currentLeafData(), parentCell.index());
     for (const auto& pillar :cellPillars)
@@ -163,23 +263,9 @@ PORO
     }
 
 
-    std::vector<std::shared_ptr<Dune::cpgrid::CpGridData>> cellRef_data;
-    std::shared_ptr<Dune::cpgrid::CpGridData> cellRefGrid_ptr = std::make_shared<Dune::cpgrid::CpGridData>(cellRef_data); // ccobj_
-    auto& cellRefGrid = *cellRefGrid_ptr;
-    Opm::Lgr::GeomData cellRefGeomData(cellRefGrid);
+    
 
-    const Dune::cpgrid::Geometry<3,3>& parentCellGeom = parentCell.geometry();
-    parentCellGeom.refineCellifiedPatch(/* cells_per_dim = */ {1,2,1}, cellRefGeomData.geometries,
-                                        cellRefGeomData.cell_to_point,
-                                        cellRefGeomData.cell_to_face,
-                                        cellRefGeomData.face_to_point,
-                                        cellRefGeomData.face_to_cell,
-                                        cellRefGeomData.face_tags,
-                                        cellRefGeomData.face_normals,
-                                        /* block/patch-dimensions = */ {1,1,1},
-                                        /* widthX, lengthY, heightZ*/ {1.}, {1.}, {1.});
-
-    const auto p = parentCellGeom.local({6, 2.73333, 8.2}); //{6., 0.3333, 1.} ); // {6., 4.36667, 6.6})
+    /* const auto p = parentCellGeom.local({6, 2.73333, 8.2}); //{6., 0.3333, 1.} ); // {6., 4.36667, 6.6})
     std::cout<< p[0] << " " << p[1] << " " << p[2] << " local!" << std::endl;
 
      const auto g = parentCellGeom.global({1, 0, 1}); //{6., 0.3333, 1.} ); // {6., 4.36667, 6.6})
@@ -201,72 +287,10 @@ PORO
          std::cout<< v[0] << " " << v[1] << " " << v[2] << std::endl;
     }
 
-    const auto& [coord, zcorn] = Opm::lgrCOORDandZCORN(cellRefGrid, /* cellRefGrid_dim = */ {1,2,1});
+    const auto& [coord, zcorn] = Opm::lgrCOORDandZCORN(cellRefGrid,  {1,2,1});
     for (const auto& c : coord)
     {
         std::cout<< c << std::endl;
     }
-    
-
-    
-    std::vector<std::vector<std::pair<int, std::vector<int>>>> faceInMarkedElemAndRefinedFaces{};
-    
-    /* grid.addLgrsUpdateLeafView({{1,2,1}}, // cells_per_dim
-                               {{0,0,0}}, // startIJK
-                               {{1,1,1}}, // endIJK
-                               {"LGR1"}); // lgr name
-
-    std::set<Dune::FieldVector<double,3>, Opm::Lgr::FieldVectorLess> output_vertices{};
-    for (const auto& p : Dune::vertices(grid.leafGridView())) {
-        const auto v = Dune::cpgrid::Entity<3>( grid.currentLeafData(), p.index(), true).geometry().center();
-        output_vertices.insert(v);
-    }
-    std::cout<<std::endl;
-
-     std::cout<< " Vertices output " << std::endl;
-    for (const auto& v : output_vertices) {
-         std::cout<< v[0] << " " << v[1] << " " << v[2] << std::endl;
-    }
-
-    
-    std::cout<< "Faces after refinement element zero " <<std::endl;
-    std::cout<<std::endl;
-
-    for (const auto& element : Dune::elements(grid.levelGridView(1))) {
-        if (Opm::Lgr::isAtGridBoundary(*grid.currentData()[1], element)) {
-
-            for (const auto& intersection : Dune::intersections(grid.levelGridView(1), element)) {
-
-                if (!intersection.neighbor()) {
-        
-                const auto& faceToPoint = grid.currentData()[1]->faceToPoint(intersection.id());
-                const auto faceTag =  grid.currentData()[1]->faceTag(intersection.id());
-       
-                if (faceTag == 0) {// I face
-                    std::cout<< "Face index: " << intersection.id() << std::endl;
-                    for (const auto& point : faceToPoint) {
-                        const auto v = Dune::cpgrid::Entity<3>( *grid.currentData()[1], point, true).geometry().center();
-                        std::cout<< v[0] << " " << v[1] << " " << v[2] << std::endl;
-                    }
-                    std::cout<<std::endl;
-                }
-                }
-            }
-        }
-        }*/
-
-
-
-    /*   bool isInteriorInA, isInteriorInB;
-    
-     const auto seg =  Opm::Lgr::computeSegmentIntersection( {6., 3., 0.},  {6., 4.36667, 6.6},
-                                                            {6., 0.33333, 1.}, {6., 6., 1.},
-                                                           isInteriorInA,
-                                                           isInteriorInB);
-    if (seg.has_value()) {
-        const auto [p,q] = seg.value();
-        std::cout<< p[0] << " " << p[1] << " " << p[2] << std::endl;
-        std::cout<< q[0] << " " << q[1] << " " << q[2] << std::endl;
-    }*/
-
+    */
 }
