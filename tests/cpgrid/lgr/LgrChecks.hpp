@@ -177,6 +177,12 @@ void checkMarksAfterPreAdapt(const Dune::CpGrid& grid,
 void checkMarksAfterPostAdapt(const Dune::CpGrid& grid,
                               int preAdaptMaxLevel);
 
+bool equalFaces(const std::vector<std::vector<Dune::FieldVector<double,3>>>& actual,
+                const std::vector<std::vector<Dune::FieldVector<double,3>>>& expected);
+
+void checkFaces(const Dune::cpgrid::CpGridData& gridData,
+                const std::vector<std::vector<Dune::FieldVector<double,3>>>& expectedFaces);
+
 } // namespace Opm
 
 void Opm::checkReferenceElemParentCellVolume(Dune::cpgrid::HierarchicIterator it,
@@ -892,6 +898,47 @@ void Opm::checkMarksAfterPostAdapt(const Dune::CpGrid& grid,
         BOOST_CHECK_EQUAL(grid.getMark(element), 0); // marks are resest after postAdapt().
         BOOST_CHECK(element.isLeaf());
     }
+}
+
+bool Opm::equalFaces(const std::vector<std::vector<Dune::FieldVector<double,3>>>& actual,
+                const std::vector<std::vector<Dune::FieldVector<double,3>>>& expected)
+{
+    if (actual.size() != expected.size())
+        return false;
+
+    for (std::size_t i = 0; i < actual.size(); ++i) {
+        if (actual[i].size() != expected[i].size())
+            return false;
+
+        auto aIt = actual[i].begin();
+        auto eIt = expected[i].begin();
+
+        while (aIt != actual[i].end()) {
+            for (int d = 0; d < 3; ++d) // coordinate by coordinate
+                 if (std::abs((*aIt)[d] - (*eIt)[d]) >= 1e-12)
+                    return false;
+
+            ++aIt;
+            ++eIt;
+        }
+    }
+
+    return true;
+}
+
+void Opm::checkFaces(const Dune::cpgrid::CpGridData& gridData,
+                     const std::vector<std::vector<Dune::FieldVector<double,3>>>& expectedFaces)
+{
+    std::vector<std::vector<Dune::FieldVector<double,3>>> actualFaces{};
+    actualFaces.resize(gridData.numFaces());
+
+    for (int i = 0; i < gridData.numFaces(); ++i) {
+        for (const auto& vertexIdx : gridData.faceToPoint(i)){
+            actualFaces[i].push_back(Dune::cpgrid::Entity<3>(gridData, vertexIdx, true).geometry().center());
+        }
+    }
+
+    BOOST_CHECK(equalFaces(actualFaces, expectedFaces));
 }
 
 #endif // OPM_LGRCHECKS_HEADER_INCLUDED
